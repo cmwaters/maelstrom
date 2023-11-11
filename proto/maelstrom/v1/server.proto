@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package maelstrom.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/cmwaters/maelstrom";
+
+service Blob {
+    rpc Info(InfoRequest) returns (InfoResponse) {
+        option (google.api.http) = { get: "/v1/info" };
+    }
+    rpc Submit(SubmitRequest) returns (SubmitResponse) {
+        option (google.api.http) = { post: "/v1/submit", body: "*" };
+    }
+    rpc Status(StatusRequest) returns (StatusResponse) {
+        option (google.api.http) = { get: "/v1/status/{id}" };
+    }
+    rpc Balance(BalanceRequest) returns (BalanceResponse) {
+        option (google.api.http) = { get: "/v1/balance/{signer}" };
+    }
+    rpc Deposit(DepositRequest) returns (DepositResponse) {
+        option (google.api.http) = { post: "/v1/deposit", body: "*" };
+    }
+    rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
+        option (google.api.http) = { post: "/v1/withdraw", body: "*" };
+    }
+    rpc WithdrawAll(WithdrawAllRequest) returns (WithdrawAllResponse) {
+        option (google.api.http) = { post: "/v1/withdrawAll", body: "*" };
+    }
+}
+
+message InfoRequest {}
+
+message InfoResponse {
+  string address = 1;
+  uint64 height = 2;
+}
+
+message SubmitRequest {
+    string signer = 1;
+    bytes namespace = 2;
+    repeated bytes blobs = 3;
+    uint64 fee = 4;
+    bytes signature = 5;
+    Options options = 6;
+}
+
+message Options {
+    uint64 timeout_blocks = 1;
+    bool compact = 2;
+    uint32 namespace_version = 3;
+    uint32 share_version = 4;
+}
+
+message SubmitResponse {   
+    uint64 id = 1;
+}
+
+message StatusRequest {
+    uint64 id = 1;
+}
+
+message StatusResponse {
+    enum Status {
+        UNKNOWN = 0;
+        PENDING = 1;
+        COMMITTED = 2;
+        EXPIRED = 3;
+    }
+    Status status = 1;
+    uint64 insert_height = 2;
+    uint64 expiry_height = 3;
+    bytes tx_hash = 4;
+    repeated bytes blob_commitments = 6;
+}
+
+message BalanceRequest {
+    string signer = 1;
+}
+
+message BalanceResponse {
+    uint64 balance = 1;
+}
+
+message DepositRequest {
+    string signer = 1;
+    uint64 amount = 2;
+    bytes signature = 3;
+}
+
+message DepositResponse {}
+
+message WithdrawRequest {
+    string signer = 1;
+    uint64 amount = 2;
+    bytes signature = 3;
+}
+
+message WithdrawResponse {}
+
+message WithdrawAllRequest {
+    string signer = 1;
+    bytes signature = 2;
+}
+
+message WithdrawAllResponse {}

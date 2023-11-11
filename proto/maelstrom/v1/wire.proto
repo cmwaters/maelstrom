@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package maelstrom.v1;
+
+option go_package = "github.com/cmwaters/maelstrom";
+
+message Account {
+    uint64 balance = 1;
+    bytes pub_key = 2;
+}
+
+message PendingTx {
+    string signer = 1;
+    uint64 fee = 2;
+}
+
+message SuccessfulTx {
+    bytes tx_hash = 1;
+    bytes blob_commitment = 2;
+}
