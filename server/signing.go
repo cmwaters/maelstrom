@@ -14,4 +14,3 @@ func SubmitRequestSignOverData(namespace []byte, blobs [][]byte) []byte {
 	_, _ = buf.Write(hash.Sum(nil))
 	return buf.Bytes()
 }
-

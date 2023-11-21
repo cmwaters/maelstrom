@@ -11,7 +11,8 @@ import (
 
 func TestCreateAndRetrieveAccount(t *testing.T) {
 	// Create a new store
-	store, err := account.NewStore(t.TempDir())
+	ownerPrivKey := secp256k1.GenPrivKey()
+	store, err := account.NewStore(t.TempDir(), ownerPrivKey.PubKey())
 	require.NoError(t, err)
 
 	privKey := secp256k1.GenPrivKey()
