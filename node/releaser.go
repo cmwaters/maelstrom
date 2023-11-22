@@ -41,5 +41,4 @@ func (r *Releaser) Start(ctx context.Context) error {
 			time.AfterFunc(r.delay, r.trigger)
 		}
 	}
-	return nil
 }

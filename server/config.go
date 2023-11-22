@@ -16,12 +16,12 @@ func DefaultConfig() *Config {
 	return &Config{
 		GRPCServerAddress:  "localhost:8080",
 		CelestiaRPCAddress: "localhost:26657",
-		CelestiaGRPCAddress: "localhost:9000",
+		CelestiaGRPCAddress: "localhost:9090",
 	}
 }
 
 func LoadConfig(file string) (*Config, error) {
-	var c *Config
+	c := DefaultConfig()
 	_, err := toml.DecodeFile(file, c)
 	return c, err
 }

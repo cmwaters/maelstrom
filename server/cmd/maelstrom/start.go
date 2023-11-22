@@ -31,7 +31,7 @@ var startCmd = &cobra.Command{
 		}
 
 		cdc := encoding.MakeConfig(app.ModuleEncodingRegisters...)
-		kr, err := keyring.New(app.Name, keyring.BackendTest, keyringDirName, nil, cdc.Codec)
+		kr, err := keyring.New(app.Name, keyring.BackendFile, keyringDirName, nil, cdc.Codec)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		server := server.New(logger, txPool, accountStore, signer)
-		return server.Serve(cmd.Context(), config.CelestiaRPCAddress)
+		server := server.New(logger, config, txPool, accountStore, signer)
+		return server.Serve(cmd.Context())
 	},
 }

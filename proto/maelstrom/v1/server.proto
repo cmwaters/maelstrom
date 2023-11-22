@@ -17,7 +17,7 @@ service Blob {
         option (google.api.http) = { get: "/v1/status/{id}" };
     }
     rpc Balance(BalanceRequest) returns (BalanceResponse) {
-        option (google.api.http) = { get: "/v1/balance/{signer}" };
+        option (google.api.http) = { get: "/v1/balance/{address}" };
     }
     rpc Deposit(DepositRequest) returns (DepositResponse) {
         option (google.api.http) = { post: "/v1/deposit", body: "*" };
@@ -72,11 +72,11 @@ message StatusResponse {
     uint64 insert_height = 2;
     uint64 expiry_height = 3;
     bytes tx_hash = 4;
-    repeated bytes blob_commitments = 6;
+    bytes blob_commitments = 5;
 }
 
 message BalanceRequest {
-    string signer = 1;
+    string address = 1;
 }
 
 message BalanceResponse {

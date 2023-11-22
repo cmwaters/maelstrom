@@ -18,9 +18,10 @@ import (
 
 var _ maelstrom.BlobServer = (*Server)(nil)
 
-func New(log zerolog.Logger, pool *tx.Pool, store *account.Store, signer *user.Signer) *Server {
+func New(log zerolog.Logger, config *Config, pool *tx.Pool, store *account.Store, signer *user.Signer) *Server {
 	return &Server{
 		log:    log,
+		config: config,
 		pool:   pool,
 		store:  store,
 		signer: signer,
@@ -28,15 +29,16 @@ func New(log zerolog.Logger, pool *tx.Pool, store *account.Store, signer *user.S
 }
 
 type Server struct {
-	maelstrom.UnimplementedBlobServer
 	log    zerolog.Logger
+	config *Config
 	pool   *tx.Pool
 	store  *account.Store
 	signer *user.Signer
+	maelstrom.UnimplementedBlobServer
 }
 
-func (s *Server) Serve(ctx context.Context, addr string) error {
-	client, err := http.New(addr, "/websocket")
+func (s *Server) Serve(ctx context.Context) error {
+	client, err := http.New(s.config.CelestiaRPCAddress, "/websocket")
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
@@ -45,7 +47,7 @@ func (s *Server) Serve(ctx context.Context, addr string) error {
 
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterBlobServer(grpcServer, s)
-	listener, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", s.config.GRPCServerAddress)
 	defer listener.Close()
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)
@@ -79,8 +81,14 @@ func (s *Server) Serve(ctx context.Context, addr string) error {
 }
 
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
-	// TODO: Implement
-	return &maelstrom.InfoResponse{}, nil
+	height, err := s.store.GetHeight()
+	if err != nil {
+		return nil, err
+	}
+	return &maelstrom.InfoResponse{
+		Address: s.signer.Address().String(),
+		Height:  uint64(height),
+	}, nil
 }
 
 func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*maelstrom.SubmitResponse, error) {
@@ -119,8 +127,13 @@ func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*mae
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {
-	// TODO: Implement
-	return &maelstrom.BalanceResponse{}, nil
+	acc, err := s.store.GetAccount(req.Address)
+	if err != nil {
+		return nil, err
+	}
+	return &maelstrom.BalanceResponse{
+		Balance: acc.Balance,
+	}, nil
 }
 
 func (s *Server) Deposit(ctx context.Context, req *maelstrom.DepositRequest) (*maelstrom.DepositResponse, error) {

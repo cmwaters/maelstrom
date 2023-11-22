@@ -1,4 +1,5 @@
 package main
+
 import (
 	"fmt"
 	"os"
@@ -7,10 +8,10 @@ import (
 )
 
 const (
-	configFileName = "config.toml"
-	keyringDirName = "keys"
-	keyName        = "master"
-	txStoreName    = "txs"
+	configFileName   = "config.toml"
+	keyringDirName   = "keys"
+	keyName          = "master"
+	txStoreName      = "txs"
 	accountStoreName = "accounts"
 )
 
@@ -23,6 +24,8 @@ func main() {
 	cmd.AddCommand(
 		initCmd,
 		startCmd,
+		infoCmd,
+		balanceCmd,
 	)
 
 	if err := cmd.Execute(); err != nil {

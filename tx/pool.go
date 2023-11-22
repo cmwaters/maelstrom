@@ -81,7 +81,9 @@ func (p *Pool) Pull() ([]*Tx, error) {
 	return nil, nil
 }
 
-func (p *Pool) ConfirmTxs()
+func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments[][]byte, txHash []byte) {
+	
+}
 
 func (p *Pool) Prune(height uint64) {
 	p.mtx.Lock()
