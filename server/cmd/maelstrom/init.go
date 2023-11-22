@@ -9,6 +9,7 @@ import (
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a test keychain and a default config",
 	Long:  `This command will initialize a test keychain and a default config.`,
-	Args: cobra.MaximumNArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {
 			if _, err := os.Stat(args[0]); os.IsExist(err) {
@@ -34,22 +35,23 @@ var initCmd = &cobra.Command{
 
 		config := server.DefaultConfig()
 		if err := config.Save("config.toml"); err != nil {
-			return err
+			return fmt.Errorf("saving config: %w", err)
 		}
 
 		if _, err := os.Stat(keyringDirName); os.IsNotExist(err) {
+			path := hd.CreateHDPath(sdk.CoinType, 0, 0).String()
 			cdc := encoding.MakeConfig(app.ModuleEncodingRegisters...).Codec
-			kr, err := keyring.New(app.Name, keyring.BackendFile, keyringDirName, nil, cdc)
+			kr, err := keyring.New(app.Name, keyring.BackendTest, keyringDirName, nil, cdc)
 			if err != nil {
 				return err
 			}
 			mnemonic, _ := cmd.Flags().GetString("mnemonic")
 			var record *keyring.Record
 			if mnemonic == "" {
-				record, mnemonic, err = kr.NewMnemonic(keyName, keyring.English, keyring.DefaultBIP39Passphrase, "", hd.Secp256k1)
+				record, mnemonic, err = kr.NewMnemonic(keyName, keyring.English, keyring.DefaultBIP39Passphrase, path, hd.Secp256k1)
 				fmt.Printf("created new account with mnemonic: %s\n", mnemonic)
 			} else {
-				record, err = kr.NewAccount(keyName, mnemonic, keyring.DefaultBIP39Passphrase, "", hd.Secp256k1)
+				record, err = kr.NewAccount(keyName, mnemonic, keyring.DefaultBIP39Passphrase, path, hd.Secp256k1)
 			}
 			if err != nil {
 				return err

@@ -7,15 +7,15 @@ import (
 )
 
 type Config struct {
-	GRPCServerAddress  string `toml:"grpc_server_address"`
-	CelestiaRPCAddress string `toml:"celestia_rpc_address"`
+	GRPCServerAddress   string `toml:"grpc_server_address"`
+	CelestiaRPCAddress  string `toml:"celestia_rpc_address"`
 	CelestiaGRPCAddress string `toml:"celestia_grpc_address"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCServerAddress:  "localhost:8080",
-		CelestiaRPCAddress: "localhost:26657",
+		GRPCServerAddress:   "0.0.0.0:8080",
+		CelestiaRPCAddress:  "127.0.0.1:26657",
 		CelestiaGRPCAddress: "localhost:9090",
 	}
 }

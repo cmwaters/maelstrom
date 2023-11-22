@@ -8,6 +8,7 @@ import (
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/cmwaters/maelstrom/account"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/rs/zerolog"
 	"github.com/tendermint/tendermint/rpc/client"
 
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -15,7 +16,7 @@ import (
 
 // Reader listens to committed blocks to the Celestia blockchain
 // and updates the balances of accounts in its store
-func Read(ctx context.Context, client client.Client, store *account.Store) error {
+func Read(ctx context.Context, log zerolog.Logger, client client.Client, store *account.Store) error {
 	latestStoreHeight, err := store.GetHeight()
 	if err != nil {
 		return err
@@ -25,6 +26,7 @@ func Read(ctx context.Context, client client.Client, store *account.Store) error
 		return err
 	}
 	address := pubKey.Address().String()
+	log.Info().Str("address", address).Int64("height", latestStoreHeight).Msg("starting chain reader")
 
 	ticker := time.NewTicker(time.Second)
 	for {
@@ -35,7 +37,7 @@ func Read(ctx context.Context, client client.Client, store *account.Store) error
 				return err
 			}
 			if head.Header.Height > latestStoreHeight {
-				if err := Sync(ctx, client, store, address, latestStoreHeight+1, head.Header.Height); err != nil {
+				if err := Sync(ctx, log, client, store, address, latestStoreHeight+1, head.Header.Height); err != nil {
 					return err
 				}
 				latestStoreHeight = head.Header.Height
@@ -46,7 +48,7 @@ func Read(ctx context.Context, client client.Client, store *account.Store) error
 	}
 }
 
-func Sync(ctx context.Context, client client.Client, store *account.Store, signer string, fromHeight, toHeight int64) error {
+func Sync(ctx context.Context, log zerolog.Logger, client client.Client, store *account.Store, signer string, fromHeight, toHeight int64) error {
 	decoder := encoding.MakeConfig(app.ModuleEncodingRegisters...).TxConfig.TxDecoder()
 	for height := fromHeight; height <= toHeight; height++ {
 		block, err := client.Block(ctx, &height)
@@ -57,6 +59,10 @@ func Sync(ctx context.Context, client client.Client, store *account.Store, signe
 		sendTxs := filterSendTxs(block.Block.Data.Txs.ToSliceOfBytes(), decoder, signer)
 
 		if len(sendTxs) == 0 {
+			log.Info().Int64("height", height).Msg("processed block")
+			if err := store.SetHeight(uint64(height)); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -77,6 +83,7 @@ func Sync(ctx context.Context, client client.Client, store *account.Store, signe
 		if err := store.ProcessDeposits(deposits, uint64(height)); err != nil {
 			return err
 		}
+		log.Info().Int64("height", height).Int("deposits", len(sendTxs)).Msg("processed block")
 	}
 
 	return nil

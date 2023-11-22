@@ -1,5 +1,5 @@
-package server 
+package server
 
 func (s *Server) broadcastTx() {
-	
+
 }

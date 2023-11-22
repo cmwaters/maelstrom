@@ -18,7 +18,7 @@ type Pool struct {
 	store         *Store
 }
 
-func New(latestHeight uint64, dbDir string) (*Pool, error) {
+func NewPool(dbDir string, latestHeight uint64) (*Pool, error) {
 	store, err := NewStore(dbDir)
 	if err != nil {
 		return nil, err
@@ -28,6 +28,7 @@ func New(latestHeight uint64, dbDir string) (*Pool, error) {
 		txByHash:      make(map[string]uint64),
 		prunedTxCache: make(map[uint64]struct{}),
 		store:         store,
+		latestHeight:  latestHeight,
 	}, nil
 }
 
@@ -81,8 +82,8 @@ func (p *Pool) Pull() ([]*Tx, error) {
 	return nil, nil
 }
 
-func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments[][]byte, txHash []byte) {
-	
+func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments [][]byte, txHash []byte) {
+
 }
 
 func (p *Pool) Prune(height uint64) {

@@ -3,8 +3,8 @@ package tx_test
 import (
 	"testing"
 
-	"github.com/cmwaters/maelstrom/tx"
 	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	"github.com/cmwaters/maelstrom/tx"
 	"github.com/stretchr/testify/require"
 )
 

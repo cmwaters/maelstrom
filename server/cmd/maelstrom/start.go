@@ -23,7 +23,7 @@ var startCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config, err := server.LoadConfig("config.toml")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load server configuration: %w", err)
 		}
 
 		if _, err := os.Stat(keyringDirName); os.IsNotExist(err) {
@@ -31,7 +31,7 @@ var startCmd = &cobra.Command{
 		}
 
 		cdc := encoding.MakeConfig(app.ModuleEncodingRegisters...)
-		kr, err := keyring.New(app.Name, keyring.BackendFile, keyringDirName, nil, cdc.Codec)
+		kr, err := keyring.New(app.Name, keyring.BackendTest, keyringDirName, nil, cdc.Codec)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,17 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		signer, err := user.SetupSingleSigner(cmd.Context(), kr, grpcConn, cdc)
+		record, err := kr.Key(keyName)
+		if err != nil {
+			return err
+		}
+
+		address, err := record.GetAddress()
+		if err != nil {
+			return err
+		}
+
+		signer, err := user.SetupSigner(cmd.Context(), kr, grpcConn, address, cdc)
 		if err != nil {
 			return err
 		}
@@ -57,7 +67,7 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		txPool, err := tx.New(uint64(latestStoreHeight), txStoreName)
+		txPool, err := tx.NewPool(txStoreName, uint64(latestStoreHeight))
 		if err != nil {
 			return err
 		}

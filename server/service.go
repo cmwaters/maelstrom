@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/cmwaters/maelstrom/account"
@@ -42,8 +44,10 @@ func (s *Server) Serve(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create client: %w", err)
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	releaser := node.NewReleaser(client, 10, s.broadcastTx)
+	releaser := node.NewReleaser(client, 10*time.Second, s.broadcastTx)
 
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterBlobServer(grpcServer, s)
@@ -61,12 +65,14 @@ func (s *Server) Serve(ctx context.Context) error {
 		grpcServer.GracefulStop()
 	}()
 	go func() {
+		s.log.Info().Str("address", s.config.GRPCServerAddress).Msg("starting gRPC server")
 		errCh <- grpcServer.Serve(listener)
 	}()
 	go func() {
-		errCh <- node.Read(ctx, client, s.store)
+		errCh <- node.Read(ctx, s.log, client, s.store)
 	}()
 	go func() {
+		s.log.Info().Msg("starting releaser")
 		errCh <- releaser.Start(ctx)
 	}()
 
@@ -75,6 +81,9 @@ func (s *Server) Serve(ctx context.Context) error {
 		err := <-errCh
 		if err != nil && firstErr == nil {
 			firstErr = err
+			cancel()
+		} else if !errors.Is(err, context.Canceled) {
+			s.log.Error().Err(err).Msg("shutting down")
 		}
 	}
 	return firstErr

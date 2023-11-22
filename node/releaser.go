@@ -10,14 +10,14 @@ import (
 type Releaser struct {
 	client  client.Client
 	trigger func()
-	delay time.Duration
+	delay   time.Duration
 }
 
 func NewReleaser(client client.Client, delay time.Duration, trigger func()) *Releaser {
 	return &Releaser{
 		client:  client,
 		trigger: trigger,
-		delay: delay,
+		delay:   delay,
 	}
 }
 
@@ -26,13 +26,13 @@ func (r *Releaser) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = r.client.Stop()}()
+	defer func() { _ = r.client.Stop() }()
 
 	eventsCh, err := r.client.Subscribe(ctx, "releaser", "tm.events.type='NewBlockHeader'")
 	if err != nil {
 		return err
 	}
-	defer func() { _ = r.client.UnsubscribeAll(ctx, "releaser")}()
+	defer func() { _ = r.client.UnsubscribeAll(ctx, "releaser") }()
 	for {
 		select {
 		case <-ctx.Done():

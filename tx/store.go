@@ -23,7 +23,9 @@ type Store struct {
 }
 
 func NewStore(dir string) (*Store, error) {
-	db, err := badger.Open(badger.DefaultOptions(dir))
+	opts := badger.DefaultOptions(dir)
+	opts.Logger = nil // Suppress the logs from badger
+	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, err
 	}

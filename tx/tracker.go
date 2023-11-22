@@ -45,4 +45,3 @@ func (t *Tracker) Delete(hash string) error {
 		return txn.Delete([]byte(hash))
 	})
 }
-
