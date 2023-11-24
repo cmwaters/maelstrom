@@ -41,6 +41,46 @@ func (tx *Tx) Hash() []byte {
 	return tx.hash
 }
 
+func (tx *Tx) Key() uint64 {
+	return tx.key
+}
+
+func (tx *Tx) Signer() string {
+	return tx.signer
+}
+
+func (tx *Tx) Namespace() []byte {
+	return tx.namespace
+}
+
+func (tx *Tx) Blobs() [][]byte {
+	return tx.blobs
+}
+
+func (tx *Tx) Fee() uint64 {
+	return tx.fee
+}
+
+func (tx *Tx) InsertHeight() uint64 {
+	return tx.insertHeight
+}
+
+func (tx *Tx) TimeoutBlocks() uint64 {
+	return tx.timeoutBlocks
+}
+
+func (tx *Tx) Compact() bool {
+	return tx.compact
+}
+
+func (tx *Tx) NamespaceVersion() uint32 {
+	return tx.namespaceVersion
+}
+
+func (tx *Tx) ShareVersion() uint32 {
+	return tx.shareVersion
+}
+
 func (tx *Tx) ToPendingTx() *wire.PendingTx {
 	return NewPendingTx(tx.signer, tx.fee)
 }

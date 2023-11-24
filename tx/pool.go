@@ -1,11 +1,14 @@
 package tx
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
 	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 )
+
+var ErrTxNotFound = errors.New("transaction not found")
 
 type Pool struct {
 	mtx          sync.Mutex
@@ -13,9 +16,10 @@ type Pool struct {
 	txs          map[uint64]*Tx
 	// this is used for replay protection, preventing a user from submitting
 	// the exact same payload multiple times
-	txByHash      map[string]uint64 // signer -> tx hash
-	prunedTxCache map[uint64]struct{}
-	store         *Store
+	txByHash          map[string]uint64 // signer -> tx hash
+	prunedTxCache     map[uint64]struct{}
+	successfulTxCache map[uint64]struct{}
+	store             *Store
 }
 
 func NewPool(dbDir string, latestHeight uint64) (*Pool, error) {
@@ -24,11 +28,12 @@ func NewPool(dbDir string, latestHeight uint64) (*Pool, error) {
 		return nil, err
 	}
 	return &Pool{
-		txs:           make(map[uint64]*Tx),
-		txByHash:      make(map[string]uint64),
-		prunedTxCache: make(map[uint64]struct{}),
-		store:         store,
-		latestHeight:  latestHeight,
+		txs:               make(map[uint64]*Tx),
+		txByHash:          make(map[string]uint64),
+		prunedTxCache:     make(map[uint64]struct{}),
+		successfulTxCache: make(map[uint64]struct{}),
+		store:             store,
+		latestHeight:      latestHeight,
 	}, nil
 }
 
@@ -75,15 +80,51 @@ func (p *Pool) Remove(key uint64) error {
 }
 
 func (p *Pool) Get(key uint64) (*Tx, error) {
-	return nil, nil
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	tx, ok := p.txs[key]
+	if !ok {
+		return nil, ErrTxNotFound
+	}
+	return tx, nil
+}
+
+func (p *Pool) IsExpired(key uint64) bool {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	_, ok := p.prunedTxCache[key]
+	return ok
+}
+
+func (p *Pool) GetSuccessfulTx(key uint64) (*maelstrom.SuccessfulTx, error) {
+	return p.store.GetSuccessfulTx(key)
 }
 
 func (p *Pool) Pull() ([]*Tx, error) {
 	return nil, nil
 }
 
-func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments [][]byte, txHash []byte) {
+func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments [][]byte, txHash []byte) error {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
 
+	for i, key := range txKeys {
+		successfulTx := &maelstrom.SuccessfulTx{
+			BlobCommitment: blobCommitments[i],
+			TxHash:         txHash,
+		}
+		if err := p.store.MarkSuccessful(key, successfulTx); err != nil {
+			return err
+		}
+		p.successfulTxCache[key] = struct{}{}
+		if tx, ok := p.txs[key]; ok {
+			delete(p.txs, key)
+			delete(p.txByHash, string(tx.hash))
+		}
+	}
+	return nil
 }
 
 func (p *Pool) Prune(height uint64) {

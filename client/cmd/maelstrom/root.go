@@ -7,13 +7,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	configFileName   = "config.toml"
+	keyringDirName   = "keys"
+	keyName          = "maelstrom"
+)
+
 func main() {
 	cmd := &cobra.Command{
 		Use:   "maelstrom",
-		Short: "CLI for managing the maelstrom server",
+		Short: "maelstrom client cli for submitting blobs",
 	}
 
-	cmd.AddCommand()
+	cmd.AddCommand(
+		initCmd,
+	)
 
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)

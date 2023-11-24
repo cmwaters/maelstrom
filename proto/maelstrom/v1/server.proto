@@ -72,7 +72,7 @@ message StatusResponse {
     uint64 insert_height = 2;
     uint64 expiry_height = 3;
     bytes tx_hash = 4;
-    bytes blob_commitments = 5;
+    bytes blob_commitment = 5;
 }
 
 message BalanceRequest {

@@ -12,6 +12,7 @@ import (
 	"github.com/cmwaters/maelstrom/node"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/tx"
+	"github.com/dgraph-io/badger"
 	"github.com/rs/zerolog"
 
 	"github.com/tendermint/tendermint/rpc/client/http"
@@ -131,8 +132,30 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 }
 
 func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*maelstrom.StatusResponse, error) {
-	// TODO: Implement
-	return &maelstrom.StatusResponse{}, nil
+	t, err := s.pool.Get(req.Id)
+	if t != nil {
+		return &maelstrom.StatusResponse{
+			Status: maelstrom.StatusResponse_PENDING,
+			InsertHeight: t.InsertHeight(),
+			ExpiryHeight: t.InsertHeight() + t.TimeoutBlocks(),
+		}, nil
+	}
+	if errors.Is(err, tx.ErrTxNotFound) {
+		if s.pool.IsExpired(req.Id) {
+			return &maelstrom.StatusResponse{
+				Status: maelstrom.StatusResponse_EXPIRED,
+			}, nil
+		}
+		t, err := s.pool.GetSuccessfulTx(req.Id)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return &maelstrom.StatusResponse{
+				Status: maelstrom.StatusResponse_UNKNOWN,
+				BlobCommitments: t.BlobCommitment,
+				TxHash: t.TxHash,
+			}, nil
+		}
+	}
+	return &maelstrom.StatusResponse{}, err
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {
