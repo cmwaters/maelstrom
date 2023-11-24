@@ -6,7 +6,7 @@ import (
 
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
-	"github.com/cmwaters/maelstrom/server"
+	"github.com/cmwaters/maelstrom/client/cmd/config"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -33,8 +33,8 @@ var initCmd = &cobra.Command{
 			return nil
 		}
 
-		config := server.DefaultConfig()
-		if err := config.Save("config.toml"); err != nil {
+		cfg := config.Default()
+		if err := cfg.Save("config.toml"); err != nil {
 			return fmt.Errorf("saving config: %w", err)
 		}
 
@@ -71,4 +71,3 @@ var initCmd = &cobra.Command{
 func init() {
 	initCmd.Flags().String("mnemonic", "", "Specify a mnemonic to create the keys from")
 }
-

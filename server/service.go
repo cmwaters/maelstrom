@@ -135,7 +135,7 @@ func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*mae
 	t, err := s.pool.Get(req.Id)
 	if t != nil {
 		return &maelstrom.StatusResponse{
-			Status: maelstrom.StatusResponse_PENDING,
+			Status:       maelstrom.StatusResponse_PENDING,
 			InsertHeight: t.InsertHeight(),
 			ExpiryHeight: t.InsertHeight() + t.TimeoutBlocks(),
 		}, nil
@@ -149,9 +149,9 @@ func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*mae
 		t, err := s.pool.GetSuccessfulTx(req.Id)
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			return &maelstrom.StatusResponse{
-				Status: maelstrom.StatusResponse_UNKNOWN,
+				Status:          maelstrom.StatusResponse_UNKNOWN,
 				BlobCommitments: t.BlobCommitment,
-				TxHash: t.TxHash,
+				TxHash:          t.TxHash,
 			}, nil
 		}
 	}

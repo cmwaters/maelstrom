@@ -14,7 +14,6 @@ COINS="1000000000000000utia"
 DELEGATION_AMOUNT="5000000000utia"
 CELESTIA_APP_HOME="temp/celestia"
 CELESTIA_APP_VERSION=$(celestia-appd version 2>&1)
-MAELSTROM_MNEMONIC="dog comic tube mail abuse pride thought black pigeon transfer galaxy donate swift popular desert ridge gravity reward album drum cycle dial issue mean"
 
 echo "celestia-app home: ${CELESTIA_APP_HOME}"
 echo "celestia-app version: ${CELESTIA_APP_VERSION}"
@@ -36,17 +35,6 @@ celestia-appd keys add ${KEY_NAME} \
   --keyring-backend=${KEYRING_BACKEND} \
   --home ${CELESTIA_APP_HOME} \
   &> /dev/null # Hide output to reduce terminal noise
-
-celestia-appd keys add maelstrom \
-  --keyring-backend=${KEYRING_BACKEND} \
-  --home ${CELESTIA_APP_HOME} \
-  --recover <<< ${MAELSTROM_MNEMONIC}
-
-echo "Adding maelstrom account to genesis..."
-celestia-appd add-genesis-account \
-  $(celestia-appd keys show maelstrom -a --keyring-backend=${KEYRING_BACKEND} --home ${CELESTIA_APP_HOME}) \
-  $COINS \
-  --home ${CELESTIA_APP_HOME}
 
 echo "Adding genesis account..."
 celestia-appd add-genesis-account \

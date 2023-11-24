@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	configFileName   = "config.toml"
-	keyringDirName   = "keys"
-	keyName          = "maelstrom"
+	configFileName = "config.toml"
+	keyringDirName = "keys"
+	keyName        = "maelstrom"
 )
 
 func main() {
@@ -21,6 +21,8 @@ func main() {
 
 	cmd.AddCommand(
 		initCmd,
+		balanceCmd,
+		submitCmd,
 	)
 
 	if err := cmd.Execute(); err != nil {

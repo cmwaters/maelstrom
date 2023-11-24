@@ -15,7 +15,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		GRPCServerAddress:   "0.0.0.0:8080",
-		CelestiaRPCAddress:  "127.0.0.1:26657",
+		CelestiaRPCAddress:  "http://127.0.0.1:26657",
 		CelestiaGRPCAddress: "localhost:9090",
 	}
 }
