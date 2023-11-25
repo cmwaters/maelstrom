@@ -23,7 +23,7 @@ var depositCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("Failed to create Go client: %w", err)
 		}
-		amount, err := strconv.Atoi(args[0])
+		amount, err := strconv.ParseInt(args[0], 10, 64)
 		if err != nil {
 			return fmt.Errorf("Failed to parse amount: %w", err)
 		}

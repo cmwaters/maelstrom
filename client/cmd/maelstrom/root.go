@@ -23,6 +23,8 @@ func main() {
 		initCmd,
 		balanceCmd,
 		submitCmd,
+		depositCmd,
+		addressCmd,
 	)
 
 	if err := cmd.Execute(); err != nil {

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/celestiaorg/celestia-app/app"
@@ -12,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/dgraph-io/badger"
 )
 
 type Client struct {
@@ -33,6 +35,9 @@ func (c *Client) Balance(ctx context.Context) (uint64, error) {
 		Address: c.signer.Address().String(),
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), badger.ErrKeyNotFound.Error()) {
+			return 0, nil
+		}
 		return 0, err
 	}
 	return balance.Balance, nil
@@ -50,7 +55,7 @@ func (c *Client) Deposit(ctx context.Context, coins uint64) error {
 			ToAddress:   toAdress,
 			Amount:      sdk.NewCoins(sdk.NewInt64Coin(app.BondDenom, int64(coins))),
 		},
-	})
+	}, user.SetGasLimitAndFee(200000, 0.1))
 	return err
 }
 

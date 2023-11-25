@@ -25,7 +25,7 @@ func Read(ctx context.Context, log zerolog.Logger, client client.Client, store *
 	if err != nil {
 		return err
 	}
-	address := pubKey.Address().String()
+	address := sdk.AccAddress(pubKey.Address()).String()
 	log.Info().Str("address", address).Int64("height", latestStoreHeight).Msg("starting chain reader")
 
 	ticker := time.NewTicker(time.Second)
@@ -59,7 +59,7 @@ func Sync(ctx context.Context, log zerolog.Logger, client client.Client, store *
 		sendTxs := filterSendTxs(block.Block.Data.Txs.ToSliceOfBytes(), decoder, signer)
 
 		if len(sendTxs) == 0 {
-			log.Info().Int64("height", height).Msg("processed block")
+			log.Info().Int64("height", height).Int("txs", len(block.Block.Data.Txs)).Msg("processed block")
 			if err := store.SetHeight(uint64(height)); err != nil {
 				return err
 			}

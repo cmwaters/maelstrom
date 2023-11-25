@@ -27,7 +27,11 @@ func NewAccountFromBytes(bz []byte) (*Account, error) {
 
 	// FIXME: we only support secp256k1 keys for now.
 	// Need to eventually generalize this
-	pk := &secp256k1.PubKey{Key: acc.PubKey}
+	var pk crypto.PubKey
+	if acc.PubKey != nil {
+		pk = &secp256k1.PubKey{Key: acc.PubKey}
+	}
+
 	return &Account{
 		PubKey:  pk,
 		Balance: acc.Balance,
@@ -35,6 +39,11 @@ func NewAccountFromBytes(bz []byte) (*Account, error) {
 }
 
 func (a *Account) Bytes() ([]byte, error) {
+	if a.PubKey == nil {
+		return proto.Marshal(&maelstrom.Account{
+			Balance: a.Balance,
+		})
+	}
 	return proto.Marshal(&maelstrom.Account{
 		PubKey:  a.PubKey.Bytes(),
 		Balance: a.Balance,

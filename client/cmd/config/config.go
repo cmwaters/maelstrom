@@ -10,9 +10,10 @@ import (
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/celestiaorg/celestia-app/pkg/user"
-	"github.com/cmwaters/maelstrom/client/go"
+	client "github.com/cmwaters/maelstrom/client/go"
 	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -53,6 +54,23 @@ func (cfg *Config) NewClient() (*client.Client, error) {
 		return nil, fmt.Errorf("failed to dial Maelstrom server address: %w", err)
 	}
 	return client.New(keys, signer, maelstrom.NewBlobClient(maelstromConn))
+}
+
+func (cfg *Config) Address() (sdk.AccAddress, error) {
+	cdc := encoding.MakeConfig(app.ModuleEncodingRegisters...)
+	kr, err := keyring.New(cfg.KeyName, keyring.BackendTest, cfg.KeyringDir, nil, cdc.Codec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new keyring: %w", err)
+	}
+	record, err := kr.Key(cfg.KeyName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve key: %w", err)
+	}
+	address, err := record.GetAddress()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address from key record: %w", err)
+	}
+	return address, nil
 }
 
 func Default() *Config {

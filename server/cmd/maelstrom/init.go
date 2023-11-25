@@ -16,7 +16,6 @@ import (
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize a test keychain and a default config",
-	Long:  `This command will initialize a test keychain and a default config.`,
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {

@@ -6,7 +6,7 @@ ADDRESS_TO_FUND=$1
 # Check if there is a second argument, if so set it as the amount of tokens to be sent, else set a default of 1000000
 if [ -z "$2" ]
 then
-    AMOUNT_TO_SEND="1000000utia"
+    AMOUNT_TO_SEND="10000000utia"
 else
     AMOUNT_TO_SEND=$2
 fi

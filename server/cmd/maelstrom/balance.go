@@ -9,8 +9,9 @@ import (
 )
 
 var balanceCmd = &cobra.Command{
-	Use:   "balance",
+	Use:   "balance address",
 	Short: "Get balance of an address",
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config, err := server.LoadConfig("config.toml")
 		if err != nil {

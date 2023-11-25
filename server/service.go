@@ -21,22 +21,24 @@ import (
 
 var _ maelstrom.BlobServer = (*Server)(nil)
 
-func New(log zerolog.Logger, config *Config, pool *tx.Pool, store *account.Store, signer *user.Signer) *Server {
+func New(log zerolog.Logger, config *Config, pool *tx.Pool, store *account.Store, signer *user.Signer, accountRetriever *account.Querier) *Server {
 	return &Server{
-		log:    log,
-		config: config,
-		pool:   pool,
-		store:  store,
-		signer: signer,
+		log:              log,
+		config:           config,
+		pool:             pool,
+		store:            store,
+		signer:           signer,
+		accountRetriever: accountRetriever,
 	}
 }
 
 type Server struct {
-	log    zerolog.Logger
-	config *Config
-	pool   *tx.Pool
-	store  *account.Store
-	signer *user.Signer
+	log              zerolog.Logger
+	config           *Config
+	pool             *tx.Pool
+	store            *account.Store
+	signer           *user.Signer
+	accountRetriever *account.Querier
 	maelstrom.UnimplementedBlobServer
 }
 
@@ -105,6 +107,18 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 	acc, err := s.store.GetAccount(req.Signer)
 	if err != nil {
 		return nil, err
+	}
+	// If the public key is not present, we need to retrieve it from the chain
+	// and update the account store.
+	if acc.PubKey == nil {
+		pk, err := s.accountRetriever.GetPubKey(ctx, req.Signer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pubkey for signer %s: %w", req.Signer, err)
+		}
+		acc.PubKey = pk
+		if err := s.store.SetAccount(req.Signer, acc); err != nil {
+			return nil, fmt.Errorf("failed to set account for signer %s: %w", req.Signer, err)
+		}
 	}
 	msg := SubmitRequestSignOverData(req.Namespace, req.Blobs)
 	if !acc.PubKey.VerifySignature(msg, req.Signature) {

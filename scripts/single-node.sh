@@ -59,6 +59,12 @@ celestia-appd collect-gentxs \
 # https://gist.github.com/andre3k1/e3a1a7133fded5de5a9ee99c87c6fa0d?permalink_comment_id=3082272#gistcomment-3082272
 sed -i'.bak' 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' "${CELESTIA_APP_HOME}"/config/config.toml
 
+# Initialize the kv indexer
+sed -i'.bak' 's#indexer = "null"#indexer = "kv"#g' "${CELESTIA_APP_HOME}"/config/config.toml
+
+# Save the abci responses
+sed -i'.bak' 's#discard_abci_responses = true#discard_abci_responses = false#g' "${CELESTIA_APP_HOME}"/config/config.toml
+
 # Register the validator EVM address
 {
   # Wait for block 1

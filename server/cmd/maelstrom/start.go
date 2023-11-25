@@ -72,7 +72,9 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		server := server.New(logger, config, txPool, accountStore, signer)
+		accountRetriever := account.NewQuerier(grpcConn)
+
+		server := server.New(logger, config, txPool, accountStore, signer, accountRetriever)
 		return server.Serve(cmd.Context())
 	},
 }

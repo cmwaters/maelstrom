@@ -193,6 +193,21 @@ func (s *Store) updateBalance(txn *badger.Txn, address string, amount uint64, ad
 	successful := false
 	item, err := txn.Get(AddressKey(address))
 	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			if add {
+				newAccount := &Account{Balance: amount}
+				accountBytes, err := newAccount.Bytes()
+				if err != nil {
+					return false, err
+				}
+				if err := txn.Set(AddressKey(address), accountBytes); err != nil {
+					return false, err
+				}
+				return true, nil
+			} else {
+				panic(fmt.Sprintf("account %s does not exist. Tried deducting %d", address, amount))
+			}
+		}
 		return false, err
 	}
 	err = item.Value(func(val []byte) error {
