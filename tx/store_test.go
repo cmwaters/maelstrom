@@ -5,20 +5,24 @@ import (
 
 	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/tx"
+	"github.com/dgraph-io/badger"
 	"github.com/stretchr/testify/require"
 )
 
 func TestPendingTxPersistence(t *testing.T) {
-	store, err := tx.NewStore(t.TempDir())
+	db, err := badger.Open(badger.DefaultOptions(t.TempDir()))
+	require.NoError(t, err)
+
+	store, err := tx.NewStore(db)
 	require.NoError(t, err)
 
 	// Create a new PendingTx
-	pendingTx := &wire.PendingTx{
+	pendingTx := &wire.Tx{
 		// Fill with test data
 	}
 
 	// Persist the PendingTx
-	key, err := store.SetPendingTx(pendingTx)
+	key, err := store.SetPendingTx(pendingTx, nil)
 	require.NoError(t, err)
 
 	// Retrieve the PendingTx

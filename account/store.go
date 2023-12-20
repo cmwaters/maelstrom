@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -14,115 +15,96 @@ import (
 
 type Store struct {
 	db *badger.DB
+
+	lock   sync.Mutex
+	height uint64
 }
 
-var (
-	heightKey       = []byte{0x00}
-	addressPrefix   = []byte{0x01}
-	ownerAccountKey = []byte{0x02}
-)
-
-func AddressKey(address string) []byte {
-	return append(addressPrefix, []byte(address)...)
-}
-
-func NewStore(dir string, accountPubKey crypto.PubKey) (*Store, error) {
-	opts := badger.DefaultOptions(dir)
-	opts.Logger = nil // Suppress the logs from badger
-	db, err := badger.Open(opts)
-	if err != nil {
-		return nil, err
-	}
+func NewStore(db *badger.DB, accountPubKey crypto.PubKey) (*Store, error) {
 	// assert that the account key matches the one persisted to disk
 	// If none currently exists, persist the provided one
 	if accountPubKey != nil {
 		if accountPubKey.Type() != "secp256k1" {
 			return nil, fmt.Errorf("only secp256k1 keys are supported")
 		}
-		err = db.Update(func(txn *badger.Txn) error {
-			item, err := txn.Get(ownerAccountKey)
+		err := db.Update(func(txn *badger.Txn) error {
+			item, err := txn.Get(MyAccountKey())
 			if errors.Is(err, badger.ErrKeyNotFound) {
 				// Create the account prefix
-				return txn.Set(ownerAccountKey, accountPubKey.Bytes())
+				return txn.Set(MyAccountKey(), accountPubKey.Bytes())
 			} else if err != nil {
 				return err
 			} else {
 				// Check that the existing pub key matches the provided one
-				item.Value(func(val []byte) error {
+				return item.Value(func(val []byte) error {
 					if !bytes.Equal(val, accountPubKey.Bytes()) {
 						return fmt.Errorf("account prefix already exists with different public key")
 					}
 					return nil
 				})
 			}
-			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
 	// set the height if it is unset
-	err = db.Update(func(txn *badger.Txn) error {
-		_, err := txn.Get(heightKey)
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			// If no height exists, set the height key to 0
-			height := make([]byte, 8)
-			binary.BigEndian.PutUint64(height, 0)
-			return txn.Set(heightKey, height)
-		}
-		return err
-	})
-
-	return &Store{db: db}, nil
-}
-
-func (s *Store) GetHeight() (int64, error) {
 	var height uint64
-	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(heightKey)
+	err := db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get(HeightKey())
 		if err != nil {
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				// If no height exists, set the height key to 0
+				heightBytes := make([]byte, 8)
+				binary.BigEndian.PutUint64(heightBytes, height)
+				return txn.Set(HeightKey(), heightBytes)
+			}
 			return err
-		} else {
-			return item.Value(func(val []byte) error {
-				height = binary.BigEndian.Uint64(val)
-				return nil
-			})
 		}
-	})
-	return int64(height), err
-}
-
-func (s *Store) SetHeight(newHeight uint64) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		return s.setHeight(txn, newHeight)
-	})
-}
-
-func (s *Store) setHeight(txn *badger.Txn, newHeight uint64) error {
-	item, err := txn.Get(heightKey)
-	if err != nil {
-		return err
-	}
-	var oldHeight uint64
-	err = item.Value(func(val []byte) error {
-		oldHeight = binary.BigEndian.Uint64(val)
-		return nil
+		return item.Value(func(val []byte) error {
+			height = binary.BigEndian.Uint64(val)
+			return nil
+		})
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if newHeight != oldHeight+1 {
-		return fmt.Errorf("heights must be monotonically increasing. last height: %d, got: %d", oldHeight, newHeight)
+
+	return &Store{
+		db:     db,
+		height: height,
+	}, nil
+}
+
+func (s *Store) GetHeight() uint64 {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.height
+}
+
+func (s *Store) NewTx(update bool) *badger.Txn {
+	return s.db.NewTransaction(update)
+}
+
+func (s *Store) SetHeight(txn *badger.Txn, newHeight uint64) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if newHeight != s.height+1 {
+		return fmt.Errorf("last height: %d, suggested new height %d is not monotonically increasing", s.height, newHeight)
 	}
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, newHeight)
-	return txn.Set(heightKey, bz)
+	if err := txn.Set(HeightKey(), bz); err != nil {
+		return err
+	}
+	s.height = newHeight
+	return nil
 }
 
 func (s *Store) GetOwnerPubKey() (crypto.PubKey, error) {
 	var pubKey crypto.PubKey
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(ownerAccountKey)
+		item, err := txn.Get(MyAccountKey())
 		if err != nil {
 			return err
 		}
@@ -137,7 +119,7 @@ func (s *Store) GetOwnerPubKey() (crypto.PubKey, error) {
 func (s *Store) GetAccount(address string) (*Account, error) {
 	var account *Account
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(AddressKey(address))
+		item, err := txn.Get(AccountKey(address))
 		if err != nil {
 			return err
 		}
@@ -156,42 +138,30 @@ func (s *Store) SetAccount(address string, account *Account) error {
 		if err != nil {
 			return err
 		}
-		return txn.Set(AddressKey(address), bz)
+		return txn.Set(AccountKey(address), bz)
 	})
 }
 
-func (s *Store) ProcessDeposits(deposits map[string]uint64, height uint64) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		if err := s.setHeight(txn, height); err != nil {
+func (s *Store) ProcessDeposits(txn *badger.Txn, deposits map[string]uint64) error {
+	for address, amount := range deposits {
+		_, err := UpdateBalance(txn, address, amount, true)
+		if err != nil {
 			return err
 		}
-
-		for address, amount := range deposits {
-			_, err := s.updateBalance(txn, address, amount, true)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func (s *Store) UpdateBalance(address string, amount uint64, add bool) (bool, error) {
-	successful := false
-	err := s.db.Update(func(txn *badger.Txn) error {
-		var err error
-		successful, err = s.updateBalance(txn, address, amount, add)
-		return err
-	})
-	if err != nil {
-		return false, err
 	}
-	return successful, nil
+	return nil
 }
 
-func (s *Store) updateBalance(txn *badger.Txn, address string, amount uint64, add bool) (bool, error) {
+func UpdateBalanceFn(address string, amount uint64, add bool) func(*badger.Txn) error {
+	return func(txn *badger.Txn) error {
+		_, err := UpdateBalance(txn, address, amount, add)
+		return err
+	}
+}
+
+func UpdateBalance(txn *badger.Txn, address string, amount uint64, add bool) (bool, error) {
 	successful := false
-	item, err := txn.Get(AddressKey(address))
+	item, err := txn.Get(AccountKey(address))
 	if err != nil {
 		if errors.Is(err, badger.ErrKeyNotFound) {
 			if add {
@@ -200,7 +170,7 @@ func (s *Store) updateBalance(txn *badger.Txn, address string, amount uint64, ad
 				if err != nil {
 					return false, err
 				}
-				if err := txn.Set(AddressKey(address), accountBytes); err != nil {
+				if err := txn.Set(AccountKey(address), accountBytes); err != nil {
 					return false, err
 				}
 				return true, nil
@@ -227,7 +197,7 @@ func (s *Store) updateBalance(txn *badger.Txn, address string, amount uint64, ad
 			if err != nil {
 				return err
 			}
-			return txn.Set(AddressKey(address), bz)
+			return txn.Set(AccountKey(address), bz)
 		}
 		return nil
 	})

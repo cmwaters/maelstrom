@@ -7,13 +7,17 @@ import (
 	"github.com/tendermint/tendermint/rpc/client"
 )
 
+// TriggerFn is the function that is invoked by the releaser. An error
+// here will cause the releaser to stop and error out.
+type TriggerFn func() error
+
 type Releaser struct {
 	client  client.Client
-	trigger func()
+	trigger TriggerFn
 	delay   time.Duration
 }
 
-func NewReleaser(client client.Client, delay time.Duration, trigger func()) *Releaser {
+func NewReleaser(client client.Client, delay time.Duration, trigger TriggerFn) *Releaser {
 	return &Releaser{
 		client:  client,
 		trigger: trigger,
@@ -28,6 +32,8 @@ func (r *Releaser) Start(ctx context.Context) error {
 	}
 	defer func() { _ = r.client.Stop() }()
 
+	errCh := make(chan error)
+
 	eventsCh, err := r.client.Subscribe(ctx, "releaser", "tm.events.type='NewBlockHeader'")
 	if err != nil {
 		return err
@@ -35,10 +41,17 @@ func (r *Releaser) Start(ctx context.Context) error {
 	defer func() { _ = r.client.UnsubscribeAll(ctx, "releaser") }()
 	for {
 		select {
+		case err := <-errCh:
+			return err
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-eventsCh:
-			time.AfterFunc(r.delay, r.trigger)
+			time.AfterFunc(r.delay, func() {
+				err := r.trigger()
+				if err != nil {
+					errCh <- err
+				}
+			})
 		}
 	}
 }

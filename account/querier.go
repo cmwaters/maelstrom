@@ -6,7 +6,6 @@ import (
 
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
-	"github.com/celestiaorg/celestia-app/pkg/user"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"google.golang.org/grpc"
@@ -25,13 +24,11 @@ func NewQuerier(conn *grpc.ClientConn) *Querier {
 }
 
 func (q *Querier) GetPubKey(ctx context.Context, address string) (cryptotypes.PubKey, error) {
-	user.QueryAccount(ctx, q.conn, q.cdc, address)
-
 	client := auth.NewQueryClient(q.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	timeOutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	resp, err := client.Account(ctx, &auth.QueryAccountRequest{Address: address})
+	resp, err := client.Account(timeOutCtx, &auth.QueryAccountRequest{Address: address})
 	if err != nil {
 		return nil, err
 	}

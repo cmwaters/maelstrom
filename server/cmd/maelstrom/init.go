@@ -23,8 +23,12 @@ var initCmd = &cobra.Command{
 				fmt.Println("existing directory found, ignoring...")
 				return nil
 			}
-			os.MkdirAll(args[0], 0755)
-			os.Chdir(args[0])
+			if err := os.MkdirAll(args[0], 0755); err != nil {
+				return err
+			}
+			if err := os.Chdir(args[0]); err != nil {
+				return err
+			}
 		}
 
 		if _, err := os.Stat(configFileName); os.IsExist(err) {

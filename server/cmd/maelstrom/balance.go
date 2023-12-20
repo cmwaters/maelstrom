@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var balanceCmd = &cobra.Command{
@@ -17,7 +19,7 @@ var balanceCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not load config: %v", err)
 		}
-		conn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithInsecure())
+		conn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			return fmt.Errorf("did not connect: %v", err)
 		}

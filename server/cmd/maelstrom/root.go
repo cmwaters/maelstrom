@@ -8,11 +8,10 @@ import (
 )
 
 const (
-	configFileName   = "config.toml"
-	keyringDirName   = "keys"
-	keyName          = "master"
-	txStoreName      = "txs"
-	accountStoreName = "accounts"
+	configFileName = "config.toml"
+	keyringDirName = "keys"
+	keyName        = "master"
+	storeName      = "maelstrom"
 )
 
 func main() {

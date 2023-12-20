@@ -8,9 +8,11 @@ import (
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/cmwaters/maelstrom/account"
+	"github.com/cmwaters/maelstrom/node"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/cmwaters/maelstrom/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"github.com/dgraph-io/badger"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -58,23 +60,27 @@ var startCmd = &cobra.Command{
 
 		logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 
-		accountStore, err := account.NewStore(accountStoreName, signer.PubKey())
-		if err != nil {
-			return err
-		}
-		latestStoreHeight, err := accountStore.GetHeight()
+		opts := badger.DefaultOptions(storeName)
+		opts.Logger = nil // Suppress the logs from badger
+		db, err := badger.Open(opts)
 		if err != nil {
 			return err
 		}
 
-		txPool, err := tx.NewPool(txStoreName, uint64(latestStoreHeight))
+		accountStore, err := account.NewStore(db, signer.PubKey())
+		if err != nil {
+			return err
+		}
+
+		txPool, err := tx.NewPool(db, accountStore.GetHeight())
 		if err != nil {
 			return err
 		}
 
 		accountRetriever := account.NewQuerier(grpcConn)
+		feeMonitor := node.NewFeeMonitor(grpcConn)
 
-		server := server.New(logger, config, txPool, accountStore, signer, accountRetriever)
+		server := server.New(logger, config, txPool, accountStore, signer, accountRetriever, feeMonitor)
 		return server.Serve(cmd.Context())
 	},
 }

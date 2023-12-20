@@ -75,17 +75,16 @@ func (x *Account) GetPubKey() []byte {
 	return nil
 }
 
-type PendingTx struct {
+type Batch struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
-	Fee    uint64 `protobuf:"varint,2,opt,name=fee,proto3" json:"fee,omitempty"`
+	TxIds []uint64 `protobuf:"varint,1,rep,packed,name=tx_ids,json=txIds,proto3" json:"tx_ids,omitempty"`
 }
 
-func (x *PendingTx) Reset() {
-	*x = PendingTx{}
+func (x *Batch) Reset() {
+	*x = Batch{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_maelstrom_v1_wire_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -93,13 +92,13 @@ func (x *PendingTx) Reset() {
 	}
 }
 
-func (x *PendingTx) String() string {
+func (x *Batch) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PendingTx) ProtoMessage() {}
+func (*Batch) ProtoMessage() {}
 
-func (x *PendingTx) ProtoReflect() protoreflect.Message {
+func (x *Batch) ProtoReflect() protoreflect.Message {
 	mi := &file_maelstrom_v1_wire_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -111,36 +110,30 @@ func (x *PendingTx) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PendingTx.ProtoReflect.Descriptor instead.
-func (*PendingTx) Descriptor() ([]byte, []int) {
+// Deprecated: Use Batch.ProtoReflect.Descriptor instead.
+func (*Batch) Descriptor() ([]byte, []int) {
 	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PendingTx) GetSigner() string {
+func (x *Batch) GetTxIds() []uint64 {
 	if x != nil {
-		return x.Signer
+		return x.TxIds
 	}
-	return ""
+	return nil
 }
 
-func (x *PendingTx) GetFee() uint64 {
-	if x != nil {
-		return x.Fee
-	}
-	return 0
-}
-
-type SuccessfulTx struct {
+type Tx struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TxHash         []byte `protobuf:"bytes,1,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	BlobCommitment []byte `protobuf:"bytes,2,opt,name=blob_commitment,json=blobCommitment,proto3" json:"blob_commitment,omitempty"`
+	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
+	Fee    uint64 `protobuf:"varint,2,opt,name=fee,proto3" json:"fee,omitempty"`
+	TxHash []byte `protobuf:"bytes,3,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
 }
 
-func (x *SuccessfulTx) Reset() {
-	*x = SuccessfulTx{}
+func (x *Tx) Reset() {
+	*x = Tx{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_maelstrom_v1_wire_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -148,13 +141,13 @@ func (x *SuccessfulTx) Reset() {
 	}
 }
 
-func (x *SuccessfulTx) String() string {
+func (x *Tx) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SuccessfulTx) ProtoMessage() {}
+func (*Tx) ProtoMessage() {}
 
-func (x *SuccessfulTx) ProtoReflect() protoreflect.Message {
+func (x *Tx) ProtoReflect() protoreflect.Message {
 	mi := &file_maelstrom_v1_wire_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -166,21 +159,28 @@ func (x *SuccessfulTx) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SuccessfulTx.ProtoReflect.Descriptor instead.
-func (*SuccessfulTx) Descriptor() ([]byte, []int) {
+// Deprecated: Use Tx.ProtoReflect.Descriptor instead.
+func (*Tx) Descriptor() ([]byte, []int) {
 	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *SuccessfulTx) GetTxHash() []byte {
+func (x *Tx) GetSigner() string {
 	if x != nil {
-		return x.TxHash
+		return x.Signer
 	}
-	return nil
+	return ""
 }
 
-func (x *SuccessfulTx) GetBlobCommitment() []byte {
+func (x *Tx) GetFee() uint64 {
 	if x != nil {
-		return x.BlobCommitment
+		return x.Fee
+	}
+	return 0
+}
+
+func (x *Tx) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
 	}
 	return nil
 }
@@ -194,15 +194,13 @@ var file_maelstrom_v1_wire_proto_rawDesc = []byte{
 	0x6e, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x62, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x04, 0x52, 0x07, 0x62, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x12, 0x17, 0x0a, 0x07,
 	0x70, 0x75, 0x62, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70,
-	0x75, 0x62, 0x4b, 0x65, 0x79, 0x22, 0x35, 0x0a, 0x09, 0x50, 0x65, 0x6e, 0x64, 0x69, 0x6e, 0x67,
-	0x54, 0x78, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x06, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x65,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x66, 0x65, 0x65, 0x22, 0x50, 0x0a, 0x0c,
-	0x53, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x66, 0x75, 0x6c, 0x54, 0x78, 0x12, 0x17, 0x0a, 0x07,
-	0x74, 0x78, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x74,
-	0x78, 0x48, 0x61, 0x73, 0x68, 0x12, 0x27, 0x0a, 0x0f, 0x62, 0x6c, 0x6f, 0x62, 0x5f, 0x63, 0x6f,
-	0x6d, 0x6d, 0x69, 0x74, 0x6d, 0x65, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0e,
-	0x62, 0x6c, 0x6f, 0x62, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x6d, 0x65, 0x6e, 0x74, 0x42, 0x1f,
+	0x75, 0x62, 0x4b, 0x65, 0x79, 0x22, 0x1e, 0x0a, 0x05, 0x42, 0x61, 0x74, 0x63, 0x68, 0x12, 0x15,
+	0x0a, 0x06, 0x74, 0x78, 0x5f, 0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x04, 0x52, 0x05,
+	0x74, 0x78, 0x49, 0x64, 0x73, 0x22, 0x47, 0x0a, 0x02, 0x54, 0x78, 0x12, 0x16, 0x0a, 0x06, 0x73,
+	0x69, 0x67, 0x6e, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x69, 0x67,
+	0x6e, 0x65, 0x72, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x65, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04,
+	0x52, 0x03, 0x66, 0x65, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x74, 0x78, 0x5f, 0x68, 0x61, 0x73, 0x68,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x74, 0x78, 0x48, 0x61, 0x73, 0x68, 0x42, 0x1f,
 	0x5a, 0x1d, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x6d, 0x77,
 	0x61, 0x74, 0x65, 0x72, 0x73, 0x2f, 0x6d, 0x61, 0x65, 0x6c, 0x73, 0x74, 0x72, 0x6f, 0x6d, 0x62,
 	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
@@ -222,9 +220,9 @@ func file_maelstrom_v1_wire_proto_rawDescGZIP() []byte {
 
 var file_maelstrom_v1_wire_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_maelstrom_v1_wire_proto_goTypes = []interface{}{
-	(*Account)(nil),      // 0: maelstrom.v1.Account
-	(*PendingTx)(nil),    // 1: maelstrom.v1.PendingTx
-	(*SuccessfulTx)(nil), // 2: maelstrom.v1.SuccessfulTx
+	(*Account)(nil), // 0: maelstrom.v1.Account
+	(*Batch)(nil),   // 1: maelstrom.v1.Batch
+	(*Tx)(nil),      // 2: maelstrom.v1.Tx
 }
 var file_maelstrom_v1_wire_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -253,7 +251,7 @@ func file_maelstrom_v1_wire_proto_init() {
 			}
 		}
 		file_maelstrom_v1_wire_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PendingTx); i {
+			switch v := v.(*Batch); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -265,7 +263,7 @@ func file_maelstrom_v1_wire_proto_init() {
 			}
 		}
 		file_maelstrom_v1_wire_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SuccessfulTx); i {
+			switch v := v.(*Tx); i {
 			case 0:
 				return &v.state
 			case 1:

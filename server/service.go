@@ -7,12 +7,14 @@ import (
 	"net"
 	"time"
 
+	"github.com/celestiaorg/celestia-app/pkg/appconsts"
 	"github.com/celestiaorg/celestia-app/pkg/user"
+	blobtypes "github.com/celestiaorg/celestia-app/x/blob/types"
 	"github.com/cmwaters/maelstrom/account"
 	"github.com/cmwaters/maelstrom/node"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/tx"
-	"github.com/dgraph-io/badger"
+	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/rs/zerolog"
 
 	"github.com/tendermint/tendermint/rpc/client/http"
@@ -21,7 +23,15 @@ import (
 
 var _ maelstrom.BlobServer = (*Server)(nil)
 
-func New(log zerolog.Logger, config *Config, pool *tx.Pool, store *account.Store, signer *user.Signer, accountRetriever *account.Querier) *Server {
+func New(
+	log zerolog.Logger,
+	config *Config,
+	pool *tx.Pool,
+	store *account.Store,
+	signer *user.Signer,
+	accountRetriever *account.Querier,
+	feeMonitor *node.FeeMonitor,
+) *Server {
 	return &Server{
 		log:              log,
 		config:           config,
@@ -29,6 +39,7 @@ func New(log zerolog.Logger, config *Config, pool *tx.Pool, store *account.Store
 		store:            store,
 		signer:           signer,
 		accountRetriever: accountRetriever,
+		feeMonitor:       feeMonitor,
 	}
 }
 
@@ -39,6 +50,7 @@ type Server struct {
 	store            *account.Store
 	signer           *user.Signer
 	accountRetriever *account.Querier
+	feeMonitor       *node.FeeMonitor
 	maelstrom.UnimplementedBlobServer
 }
 
@@ -55,7 +67,12 @@ func (s *Server) Serve(ctx context.Context) error {
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterBlobServer(grpcServer, s)
 	listener, err := net.Listen("tcp", s.config.GRPCServerAddress)
-	defer listener.Close()
+	defer func() {
+		err := listener.Close()
+		if err != nil {
+			s.log.Error().Err(err).Msg("failed to close listener")
+		}
+	}()
 	if err != nil {
 		return fmt.Errorf("failed to setup listener: %w", err)
 	}
@@ -72,7 +89,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		errCh <- grpcServer.Serve(listener)
 	}()
 	go func() {
-		errCh <- node.Read(ctx, s.log, client, s.store)
+		errCh <- node.Read(ctx, s.log, client, s.store, s.pool)
 	}()
 	go func() {
 		s.log.Info().Msg("starting releaser")
@@ -93,13 +110,9 @@ func (s *Server) Serve(ctx context.Context) error {
 }
 
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
-	height, err := s.store.GetHeight()
-	if err != nil {
-		return nil, err
-	}
 	return &maelstrom.InfoResponse{
 		Address: s.signer.Address().String(),
-		Height:  uint64(height),
+		Height:  s.store.GetHeight(),
 	}, nil
 }
 
@@ -108,6 +121,14 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 	if err != nil {
 		return nil, err
 	}
+
+	// ensure that the transaction pays at least the minimum fee
+	gas := EstimateMinGas(req.Blobs)
+	requiredPrice := uint64(float64(gas) * s.feeMonitor.GasPrice())
+	if req.Fee < requiredPrice {
+		return nil, fmt.Errorf("minimum fee of %dutia required for this transaction", requiredPrice)
+	}
+
 	// If the public key is not present, we need to retrieve it from the chain
 	// and update the account store.
 	if acc.PubKey == nil {
@@ -129,47 +150,24 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 		return nil, fmt.Errorf("insufficient balance for signer %s, (have %d, require %d)", req.Signer, acc.Balance, req.Fee)
 	}
 
-	success, err := s.store.UpdateBalance(req.Signer, req.Fee, false)
-	if err != nil {
-		return nil, err
-	}
-	if !success {
-		return nil, fmt.Errorf("%s has insufficient balance", req.Signer)
-	}
-
-	key, err := s.pool.Add(req.Signer, req.Namespace, req.Blobs, req.Fee, req.Options)
+	key, err := s.pool.Add(req.Signer, req.Namespace, req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
 	if err != nil {
 		return nil, err
 	}
 
-	return &maelstrom.SubmitResponse{Id: key}, nil
+	return &maelstrom.SubmitResponse{Id: uint64(key)}, nil
 }
 
 func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*maelstrom.StatusResponse, error) {
-	t, err := s.pool.Get(req.Id)
-	if t != nil {
-		return &maelstrom.StatusResponse{
-			Status:       maelstrom.StatusResponse_PENDING,
-			InsertHeight: t.InsertHeight(),
-			ExpiryHeight: t.InsertHeight() + t.TimeoutBlocks(),
-		}, nil
+	status := s.pool.Status(tx.ID(req.Id))
+	resp := &maelstrom.StatusResponse{
+		Status: status,
 	}
-	if errors.Is(err, tx.ErrTxNotFound) {
-		if s.pool.IsExpired(req.Id) {
-			return &maelstrom.StatusResponse{
-				Status: maelstrom.StatusResponse_EXPIRED,
-			}, nil
-		}
-		t, err := s.pool.GetSuccessfulTx(req.Id)
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return &maelstrom.StatusResponse{
-				Status:          maelstrom.StatusResponse_UNKNOWN,
-				BlobCommitments: t.BlobCommitment,
-				TxHash:          t.TxHash,
-			}, nil
-		}
+	switch status {
+	case maelstrom.StatusResponse_PENDING:
+	default:
 	}
-	return &maelstrom.StatusResponse{}, err
+	return resp, nil
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {
@@ -195,4 +193,18 @@ func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (
 func (s *Server) WithdrawAll(ctx context.Context, req *maelstrom.WithdrawAllRequest) (*maelstrom.WithdrawAllResponse, error) {
 	// TODO: Implement
 	return &maelstrom.WithdrawAllResponse{}, nil
+}
+
+func totalBlobSize(blobs [][]byte) []uint32 {
+	size := make([]uint32, len(blobs))
+	for i, b := range blobs {
+		size[i] = uint32(len(b))
+	}
+	return size
+}
+
+func EstimateMinGas(blobs [][]byte) uint64 {
+	gas := blobtypes.GasToConsume(totalBlobSize(blobs), appconsts.DefaultGasPerBlobByte)
+	gas += blobtypes.BytesPerBlobInfo * auth.DefaultTxSizeCostPerByte * uint64(len(blobs))
+	return gas
 }

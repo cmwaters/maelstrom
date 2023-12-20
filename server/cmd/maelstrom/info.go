@@ -7,8 +7,10 @@ import (
 	"github.com/cmwaters/maelstrom/account"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
+	"github.com/dgraph-io/badger"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -21,13 +23,18 @@ var infoCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not load config: %v", err)
 		}
-		conn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithInsecure())
+		conn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			// if the server is not running, access the db directly
-			if _, err := os.Stat(accountStoreName); os.IsNotExist(err) {
+			if _, err := os.Stat(storeName); os.IsNotExist(err) {
 				return fmt.Errorf("account store not found, please run `maelstrom init`")
 			}
-			store, err := account.NewStore(accountStoreName, nil)
+			db, err := badger.Open(badger.DefaultOptions(storeName))
+			if err != nil {
+				return err
+			}
+
+			store, err := account.NewStore(db, nil)
 			if err != nil {
 				return err
 			}
@@ -35,10 +42,7 @@ var infoCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			height, err := store.GetHeight()
-			if err != nil {
-				return err
-			}
+			height := store.GetHeight()
 			fmt.Printf("Address: %s\nHeight: %d\n", sdk.AccAddress(pk.Address()).String(), height)
 			return nil
 		}

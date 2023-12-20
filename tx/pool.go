@@ -1,148 +1,106 @@
 package tx
 
 import (
+	"encoding/binary"
 	"errors"
-	"fmt"
 	"sync"
 
-	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	"github.com/dgraph-io/badger"
 )
 
 var ErrTxNotFound = errors.New("transaction not found")
 
 type Pool struct {
 	mtx          sync.Mutex
-	latestHeight uint64
-	txs          map[uint64]*Tx
+	latestHeight Height
+	totalGas     uint64
+	totalFee     uint64
+	txs          map[ID]*Tx
+	pendingQueue []*Tx
 	// this is used for replay protection, preventing a user from submitting
 	// the exact same payload multiple times
-	txByHash          map[string]uint64 // signer -> tx hash
-	prunedTxCache     map[uint64]struct{}
-	successfulTxCache map[uint64]struct{}
-	store             *Store
+	txByHash        map[string]ID
+	batchMap        map[BatchID][]ID
+	reverseBatchMap map[ID]BatchID
+	nonceMap        map[uint64]BatchID
+	broadcastMap    map[BatchID]Height
+	expiredTxMap    map[ID]Height
+	committedTxMap  map[ID]BatchID
+
+	onFailure func(id ID, signer string, fee uint64)
+
+	// persist the things that matter, the rest stays in memory
+	store *Store
 }
 
-func NewPool(dbDir string, latestHeight uint64) (*Pool, error) {
-	store, err := NewStore(dbDir)
+type Height uint64
+
+func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
+	store, err := NewStore(db)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: we need to load all the persisted values from the store
 	return &Pool{
-		txs:               make(map[uint64]*Tx),
-		txByHash:          make(map[string]uint64),
-		prunedTxCache:     make(map[uint64]struct{}),
-		successfulTxCache: make(map[uint64]struct{}),
-		store:             store,
-		latestHeight:      latestHeight,
+		txs:             make(map[ID]*Tx),
+		txByHash:        make(map[string]ID),
+		batchMap:        make(map[BatchID][]ID),
+		reverseBatchMap: make(map[ID]BatchID),
+		nonceMap:        make(map[uint64]BatchID),
+		broadcastMap:    make(map[BatchID]Height),
+		expiredTxMap:    make(map[ID]Height),
+		committedTxMap:  make(map[ID]BatchID),
+		pendingQueue:    make([]*Tx, 0),
+		store:           store,
+		latestHeight:    Height(latestHeight),
 	}, nil
 }
 
-func (p *Pool) Add(
-	signer string,
-	namespace []byte,
-	blobs [][]byte,
-	fee uint64,
-	options *maelstrom.Options,
-) (uint64, error) {
+func (p *Pool) Status(id ID) wire.StatusResponse_Status {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	tx := &Tx{
-		signer:           signer,
-		namespace:        namespace,
-		blobs:            blobs,
-		fee:              fee,
-		insertHeight:     p.latestHeight,
-		timeoutBlocks:    options.TimeoutBlocks,
-		compact:          options.Compact,
-		namespaceVersion: options.NamespaceVersion,
-		shareVersion:     options.ShareVersion,
+	_, isPending := p.txs[id]
+	if isPending {
+		BatchID, isBatched := p.reverseBatchMap[id]
+		_, isBroadcast := p.broadcastMap[BatchID]
+		if isBatched && isBroadcast {
+			return wire.StatusResponse_BROADCASTING
+		}
+		return wire.StatusResponse_PENDING
 	}
-	hash := tx.Hash()
-	if _, ok := p.txByHash[string(hash[:])]; ok {
-		return 0, fmt.Errorf("duplicate transaction")
+	_, isExpired := p.expiredTxMap[id]
+	if isExpired {
+		return wire.StatusResponse_EXPIRED
 	}
+	_, isCommitted := p.committedTxMap[id]
+	if isCommitted {
+		return wire.StatusResponse_COMMITTED
+	}
+	return wire.StatusResponse_UNKNOWN
+}
 
-	pendingTx := tx.ToPendingTx()
-	key, err := p.store.SetPendingTx(pendingTx)
+func (p *Pool) Update(height Height) (int, error) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	expiredTxs, err := p.prune(height)
 	if err != nil {
 		return 0, err
 	}
-	tx.key = key
-	p.txByHash[string(hash[:])] = key
-	p.txs[key] = tx
 
-	return key, nil
-}
-
-func (p *Pool) Remove(key uint64) error {
-	return nil
-}
-
-func (p *Pool) Get(key uint64) (*Tx, error) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	tx, ok := p.txs[key]
-	if !ok {
-		return nil, ErrTxNotFound
+	timedOutTxs, err := p.checkBroadcastTimeouts(height)
+	if err != nil {
+		return 0, err
 	}
-	return tx, nil
-}
-
-func (p *Pool) IsExpired(key uint64) bool {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	_, ok := p.prunedTxCache[key]
-	return ok
-}
-
-func (p *Pool) GetSuccessfulTx(key uint64) (*maelstrom.SuccessfulTx, error) {
-	return p.store.GetSuccessfulTx(key)
-}
-
-func (p *Pool) Pull() ([]*Tx, error) {
-	return nil, nil
-}
-
-func (p *Pool) ConfirmTxs(txKeys []uint64, blobCommitments [][]byte, txHash []byte) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	for i, key := range txKeys {
-		successfulTx := &maelstrom.SuccessfulTx{
-			BlobCommitment: blobCommitments[i],
-			TxHash:         txHash,
-		}
-		if err := p.store.MarkSuccessful(key, successfulTx); err != nil {
-			return err
-		}
-		p.successfulTxCache[key] = struct{}{}
-		if tx, ok := p.txs[key]; ok {
-			delete(p.txs, key)
-			delete(p.txByHash, string(tx.hash))
-		}
-	}
-	return nil
-}
-
-func (p *Pool) Prune(height uint64) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	for key, tx := range p.txs {
-		if tx.insertHeight+tx.timeoutBlocks < height {
-			delete(p.txs, key)
-			delete(p.txByHash, string(tx.hash))
-			p.prunedTxCache[tx.key] = struct{}{}
-		}
-	}
-}
-
-func (p *Pool) UpdateHeight(height uint64) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
 
 	p.latestHeight = height
+	return expiredTxs + timedOutTxs, nil
+}
+
+func (h Height) Bytes() []byte {
+	heightBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBytes, uint64(h))
+	return heightBytes
 }

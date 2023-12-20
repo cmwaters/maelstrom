@@ -8,14 +8,23 @@ import (
 	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 )
 
+type ID uint64
+
+func (id ID) Bytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(id))
+	return b
+}
+
 type Tx struct {
-	key              uint64
+	id               ID
 	hash             []byte
 	signer           string
 	namespace        []byte
 	blobs            [][]byte
 	fee              uint64
-	insertHeight     uint64
+	estimatedGas     uint64
+	insertHeight     Height
 	timeoutBlocks    uint64
 	compact          bool
 	namespaceVersion uint32
@@ -41,8 +50,8 @@ func (tx *Tx) Hash() []byte {
 	return tx.hash
 }
 
-func (tx *Tx) Key() uint64 {
-	return tx.key
+func (tx *Tx) ID() ID {
+	return tx.id
 }
 
 func (tx *Tx) Signer() string {
@@ -61,7 +70,11 @@ func (tx *Tx) Fee() uint64 {
 	return tx.fee
 }
 
-func (tx *Tx) InsertHeight() uint64 {
+func (tx *Tx) EstimatedGas() uint64 {
+	return tx.estimatedGas
+}
+
+func (tx *Tx) InsertHeight() Height {
 	return tx.insertHeight
 }
 
@@ -81,20 +94,26 @@ func (tx *Tx) ShareVersion() uint32 {
 	return tx.shareVersion
 }
 
-func (tx *Tx) ToPendingTx() *wire.PendingTx {
+func (tx *Tx) ToPendingTx() *wire.Tx {
 	return NewPendingTx(tx.signer, tx.fee)
 }
 
-func NewPendingTx(signer string, fee uint64) *wire.PendingTx {
-	return &wire.PendingTx{
+//nolint:unused
+func (tx *Tx) priority() float64 {
+	return float64(tx.fee) / float64(tx.estimatedGas)
+}
+
+func NewPendingTx(signer string, fee uint64) *wire.Tx {
+	return &wire.Tx{
 		Signer: signer,
 		Fee:    fee,
 	}
 }
 
-func NewSuccesfulTx(txHash, blobCommitment []byte) *wire.SuccessfulTx {
-	return &wire.SuccessfulTx{
-		TxHash:         txHash,
-		BlobCommitment: blobCommitment,
+func GetIDs(txs []*Tx) []ID {
+	ids := make([]ID, len(txs))
+	for i, tx := range txs {
+		ids[i] = tx.id
 	}
+	return ids
 }

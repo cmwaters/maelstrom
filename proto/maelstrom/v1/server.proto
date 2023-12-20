@@ -35,6 +35,7 @@ message InfoRequest {}
 message InfoResponse {
   string address = 1;
   uint64 height = 2;
+  double min_gas_price = 3;
 }
 
 message SubmitRequest {
@@ -65,14 +66,18 @@ message StatusResponse {
     enum Status {
         UNKNOWN = 0;
         PENDING = 1;
-        COMMITTED = 2;
-        EXPIRED = 3;
+        BROADCASTING = 2;
+        COMMITTED = 3;
+        EXPIRED = 4;
     }
     Status status = 1;
+
+    // If the tx is pending, these fields will be populated
     uint64 insert_height = 2;
     uint64 expiry_height = 3;
+
+    // if the tx is committed, thid field will be populated
     bytes tx_hash = 4;
-    bytes blob_commitment = 5;
 }
 
 message BalanceRequest {

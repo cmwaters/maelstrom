@@ -9,12 +9,12 @@ message Account {
     bytes pub_key = 2;
 }
 
-message PendingTx {
-    string signer = 1;
-    uint64 fee = 2;
+message Batch {
+    repeated uint64 tx_ids = 1;
 }
 
-message SuccessfulTx {
-    bytes tx_hash = 1;
-    bytes blob_commitment = 2;
+message Tx {
+    string signer = 1;
+    uint64 fee = 2;
+    bytes tx_hash = 3;
 }
