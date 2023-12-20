@@ -3,6 +3,7 @@ package tx
 import (
 	"encoding/binary"
 
+	"github.com/cmwaters/maelstrom/account"
 	"github.com/dgraph-io/badger"
 )
 
@@ -26,7 +27,6 @@ func (p *Pool) prune(height Height) (int, error) {
 
 func (p *Pool) prunePending(height Height) (int, error) {
 	txsToExpire := make([]*Tx, 0)
-	expiredTxIds := make([]ID, len(txsToExpire))
 	for id, tx := range p.txs {
 		if tx.insertHeight+Height(tx.timeoutBlocks) < height {
 			// if it is part of a batch that has been broadcasted
@@ -38,10 +38,9 @@ func (p *Pool) prunePending(height Height) (int, error) {
 			}
 
 			txsToExpire = append(txsToExpire, tx)
-			expiredTxIds = append(expiredTxIds, id)
 		}
 	}
-	if err := p.store.MarkExpired(expiredTxIds, height); err != nil {
+	if err := p.store.MarkExpired(txsToExpire, height); err != nil {
 		return 0, err
 	}
 	for _, tx := range txsToExpire {
@@ -69,10 +68,15 @@ func (p *Pool) pruneExpired(height Height) error {
 	return nil
 }
 
-func (s *Store) MarkExpired(keys []ID, height Height) error {
+func (s *Store) MarkExpired(txs []*Tx, height Height) error {
 	return s.db.Update(func(txn *badger.Txn) error {
-		for _, key := range keys {
-			if err := markExpired(txn, key, height); err != nil {
+		for _, tx := range txs {
+			if err := markExpired(txn, tx.id, height); err != nil {
+				return err
+			}
+
+			// refund the fee back to the user
+			if _, err := account.UpdateBalance(txn, tx.signer, tx.fee, true); err != nil {
 				return err
 			}
 		}
@@ -81,10 +85,6 @@ func (s *Store) MarkExpired(keys []ID, height Height) error {
 }
 
 func markExpired(txn *badger.Txn, key ID, height Height) error {
-	_, err := txn.Get(PendingTxKey(key))
-	if err != nil {
-		return err
-	}
 	heightBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightBytes, uint64(height))
 
