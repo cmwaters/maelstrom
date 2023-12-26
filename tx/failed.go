@@ -34,17 +34,6 @@ func (p *Pool) MarkFailed(batchID BatchID, height Height) error {
 	return nil
 }
 
-func (p *Pool) loadLastExpiredTxs(limit ID) error {
-	expiredTxs, err := p.store.LoadRecentlyExpiredTxs(limit)
-	if err != nil {
-		return err
-	}
-	for id, height := range expiredTxs {
-		p.expiredTxMap[id] = height
-	}
-	return nil
-}
-
 func (s *Store) MarkFailed(batchID BatchID, txs []*Tx, height Height) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		for _, tx := range txs {

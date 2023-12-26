@@ -107,3 +107,58 @@ func (s *Store) MarkAsTimedOut(batches []BatchID, txs []*Tx, height Height) erro
 		return nil
 	})
 }
+
+func (s *Store) LoadAllBatchedTxs() (map[BatchID][]ID, error) {
+	batchedTxs := make(map[BatchID][]ID)
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		prefix := []byte{BatchIDPrefix}
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			batchID := BatchIDFromBytes(item.Key())
+
+			batch := &wire.Batch{}
+			err := item.Value(func(val []byte) error {
+				return proto.Unmarshal(val, batch)
+			})
+			if err != nil {
+				return err
+			}
+
+			batchedTxs[batchID] = ToIDs(batch.TxIds)
+		}
+		return nil
+	})
+	return batchedTxs, err
+}
+
+func (s *Store) LoadAllBroadcastedBatches() (map[BatchID]Height, error) {
+	batchedTxs := make(map[BatchID]Height)
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		prefix := []byte{BroadcastedPrefix}
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			batchID := BatchIDFromBytes(item.Key())
+			var height Height
+			err := item.Value(func(val []byte) error {
+				height = HeightFromBytes(val)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			batchedTxs[batchID] = height
+		}
+		return nil
+	})
+	return batchedTxs, err
+}

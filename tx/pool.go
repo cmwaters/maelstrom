@@ -19,6 +19,10 @@ func (h Height) Bytes() []byte {
 	return heightBytes
 }
 
+func HeightFromBytes(heightBytes []byte) Height {
+	return Height(binary.BigEndian.Uint64(heightBytes))
+}
+
 const defaultCacheSize = 1000
 
 type Pool struct {
@@ -143,14 +147,6 @@ func (p *Pool) load(height Height, cacheSize int) error {
 		return err
 	}
 
-	expiredTxs, err := p.store.RefundLostPendingTxs(height)
-	if err != nil {
-		return err
-	}
-	for id, height := range expiredTxs {
-		p.expiredTxMap[id] = height
-	}
-
 	limitID := ID(0)
 	if uint64(lastKey) > uint64(cacheSize) {
 		limitID = lastKey - ID(cacheSize)
@@ -164,5 +160,27 @@ func (p *Pool) load(height Height, cacheSize int) error {
 		p.committedTxMap[id] = tx.TxHash
 	}
 
-	return p.loadLastExpiredTxs(limitID)
+	expiredTxs, err := p.store.LoadRecentlyExpiredTxs(limitID)
+	if err != nil {
+		return err
+	}
+	for id, height := range expiredTxs {
+		p.expiredTxMap[id] = height
+	}
+
+	expiredTxs, err = p.store.RefundLostPendingTxs(height)
+	if err != nil {
+		return err
+	}
+	for id, height := range expiredTxs {
+		p.expiredTxMap[id] = height
+	}
+
+	p.batchMap, err = p.store.LoadAllBatchedTxs()
+	if err != nil {
+		return err
+	}
+
+	p.broadcastMap, err = p.store.LoadAllBroadcastedBatches()
+	return err
 }

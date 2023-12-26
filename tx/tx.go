@@ -16,6 +16,14 @@ func (id ID) Bytes() []byte {
 	return b
 }
 
+func ToIDs(ids []uint64) []ID {
+	ids2 := make([]ID, len(ids))
+	for i, id := range ids {
+		ids2[i] = ID(id)
+	}
+	return ids2
+}
+
 type Tx struct {
 	id               ID
 	hash             []byte
