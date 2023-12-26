@@ -11,6 +11,14 @@ import (
 
 var ErrTxNotFound = errors.New("transaction not found")
 
+type Height uint64
+
+func (h Height) Bytes() []byte {
+	heightBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBytes, uint64(h))
+	return heightBytes
+}
+
 type Pool struct {
 	mtx          sync.Mutex
 	latestHeight Height
@@ -28,13 +36,9 @@ type Pool struct {
 	expiredTxMap    map[ID]Height
 	committedTxMap  map[ID]BatchID
 
-	onFailure func(id ID, signer string, fee uint64)
-
 	// persist the things that matter, the rest stays in memory
 	store *Store
 }
-
-type Height uint64
 
 func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 	store, err := NewStore(db)
@@ -99,8 +103,10 @@ func (p *Pool) Update(height Height) (int, error) {
 	return expiredTxs + timedOutTxs, nil
 }
 
-func (h Height) Bytes() []byte {
-	heightBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(heightBytes, uint64(h))
-	return heightBytes
+func (p *Pool) getTxs(ids []ID) []*Tx {
+	txs := make([]*Tx, len(ids))
+	for i, id := range ids {
+		txs[i] = p.txs[id]
+	}
+	return txs
 }

@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-app/pkg/appconsts"
+	"github.com/celestiaorg/celestia-app/pkg/namespace"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	blobtypes "github.com/celestiaorg/celestia-app/x/blob/types"
 	"github.com/cmwaters/maelstrom/account"
 	"github.com/cmwaters/maelstrom/node"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/tx"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/rs/zerolog"
 
@@ -109,6 +111,20 @@ func (s *Server) Serve(ctx context.Context) error {
 	return firstErr
 }
 
+func (s *Server) Wait() {
+	initialHeight := s.store.GetHeight()
+	ticker := time.NewTicker(100 * time.Millisecond)
+	for {
+		select {
+		case <-ticker.C:
+			newHeight := s.store.GetHeight()
+			if newHeight > initialHeight {
+				return
+			}
+		}
+	}
+}
+
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
 	return &maelstrom.InfoResponse{
 		Address: s.signer.Address().String(),
@@ -117,6 +133,10 @@ func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstr
 }
 
 func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*maelstrom.SubmitResponse, error) {
+	if err := validateSubmitRequest(req); err != nil {
+		return nil, err
+	}
+
 	acc, err := s.store.GetAccount(req.Signer)
 	if err != nil {
 		return nil, err
@@ -207,4 +227,29 @@ func EstimateMinGas(blobs [][]byte) uint64 {
 	gas := blobtypes.GasToConsume(totalBlobSize(blobs), appconsts.DefaultGasPerBlobByte)
 	gas += blobtypes.BytesPerBlobInfo * auth.DefaultTxSizeCostPerByte * uint64(len(blobs))
 	return gas
+}
+
+func validateSubmitRequest(req *maelstrom.SubmitRequest) error {
+	// check that the namespace is valid
+	_, err := namespace.From(req.Namespace)
+	if err != nil {
+		return fmt.Errorf("invalid namespace: %w", err)
+	}
+
+	if len(req.Blobs) == 0 {
+		return errors.New("no blobs provided")
+	}
+
+	if len(req.Signature) == 0 {
+		return errors.New("no signature provided")
+	}
+
+	for idx, blob := range req.Blobs {
+		if len(blob) == 0 {
+			return fmt.Errorf("blob %d contains no data", idx)
+		}
+	}
+
+	_, err = sdk.AccAddressFromBech32(req.Signer)
+	return err
 }

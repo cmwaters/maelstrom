@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/celestiaorg/celestia-app/app"
+	ns "github.com/celestiaorg/celestia-app/pkg/namespace"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
@@ -55,19 +56,23 @@ func (c *Client) Deposit(ctx context.Context, coins uint64) error {
 			ToAddress:   toAdress,
 			Amount:      sdk.NewCoins(sdk.NewInt64Coin(app.BondDenom, int64(coins))),
 		},
-	}, user.SetGasLimitAndFee(200000, 0.1))
+	}, user.SetGasLimitAndFee(200_000, 0.1))
 	return err
 }
 
 func (c *Client) Submit(ctx context.Context, namespace []byte, blobs [][]byte, fee uint64) (uint64, error) {
-	msg := server.SubmitRequestSignOverData(namespace, blobs)
+	n, err := ns.NewV0(namespace)
+	if err != nil {
+		return 0, err
+	}
+	msg := server.SubmitRequestSignOverData(n.Bytes(), blobs)
 	signature, _, err := c.keys.SignByAddress(c.signer.Address(), msg)
 	if err != nil {
 		return 0, err
 	}
 	resp, err := c.client.Submit(ctx, &maelstrom.SubmitRequest{
 		Signer:    c.signer.Address().String(),
-		Namespace: namespace,
+		Namespace: n.Bytes(),
 		Blobs:     blobs,
 		Fee:       fee,
 		Signature: signature,

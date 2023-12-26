@@ -19,14 +19,7 @@ func (b BatchID) Bytes() []byte {
 	return []byte(b)
 }
 
-func (p *Pool) BatchTxs(ids []ID, batchID BatchID) error {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	if err := p.store.Batch(ids, batchID); err != nil {
-		return err
-	}
-
+func (p *Pool) batchTxs(ids []ID, batchID BatchID) {
 	// remove txs from the pending queue
 	for i := range p.pendingQueue {
 		if p.pendingQueue[i].id == ids[0] {
@@ -42,25 +35,6 @@ func (p *Pool) BatchTxs(ids []ID, batchID BatchID) error {
 	for _, id := range ids {
 		p.reverseBatchMap[id] = batchID
 	}
-	return nil
-}
-
-func (s *Store) Batch(ids []ID, batchID BatchID) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		batch := &wire.Batch{TxIds: make([]uint64, len(ids))}
-		for i, key := range ids {
-			batch.TxIds[i] = uint64(key)
-		}
-		batchBytes, err := proto.Marshal(batch)
-		if err != nil {
-			return err
-		}
-
-		if err := txn.Set(BatchKey(batchID), batchBytes); err != nil {
-			return err
-		}
-		return nil
-	})
 }
 
 func (s *Store) GetBatch(batchID BatchID) ([]ID, error) {
@@ -90,13 +64,17 @@ func (s *Store) GetBatch(batchID BatchID) ([]ID, error) {
 func (s *Store) DeleteBatches(batchIDs []BatchID) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		for _, batchID := range batchIDs {
-			if err := txn.Delete(BatchKey(batchID)); err != nil {
-				return err
-			}
-			if err := txn.Delete(BroadcastedBatchKey(batchID)); err != nil {
+			if err := deleteBatch(txn, batchID); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
+}
+
+func deleteBatch(txn *badger.Txn, batchID BatchID) error {
+	if err := txn.Delete(BatchKey(batchID)); err != nil {
+		return err
+	}
+	return txn.Delete(BroadcastedBatchKey(batchID))
 }

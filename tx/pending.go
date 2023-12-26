@@ -3,9 +3,15 @@ package tx
 import (
 	"fmt"
 
+	"github.com/cmwaters/maelstrom/account"
 	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/dgraph-io/badger"
 	"google.golang.org/protobuf/proto"
+)
+
+const (
+	defaultTimeout = 10
+	maxTimeout     = 1_000
 )
 
 func (p *Pool) Add(
@@ -20,16 +26,18 @@ func (p *Pool) Add(
 	defer p.mtx.Unlock()
 
 	tx := &Tx{
-		signer:           signer,
-		namespace:        namespace,
-		blobs:            blobs,
-		fee:              fee,
-		estimatedGas:     estimatedGas,
-		insertHeight:     p.latestHeight,
-		timeoutBlocks:    options.TimeoutBlocks,
-		compact:          options.Compact,
-		namespaceVersion: options.NamespaceVersion,
-		shareVersion:     options.ShareVersion,
+		signer:        signer,
+		namespace:     namespace,
+		blobs:         blobs,
+		fee:           fee,
+		estimatedGas:  estimatedGas,
+		insertHeight:  p.latestHeight,
+		timeoutBlocks: defaultTimeout,
+	}
+	if options != nil {
+		if options.TimeoutBlocks > 0 && options.TimeoutBlocks <= maxTimeout {
+			tx.timeoutBlocks = options.TimeoutBlocks
+		}
 	}
 	hash := tx.Hash()
 	if _, ok := p.txByHash[string(hash[:])]; ok {
@@ -58,7 +66,13 @@ func (p *Pool) Cancel(id ID) error {
 	if !ok {
 		return fmt.Errorf("tx not found")
 	}
-	if err := p.store.DeletePendingTx(id); err != nil {
+	refund := func(txn *badger.Txn) error {
+		// refund the fee back to the user
+		_, err := account.UpdateBalance(txn, tx.signer, tx.fee, true)
+		return err
+	}
+
+	if err := p.store.DeletePendingTx(id, refund); err != nil {
 		return err
 	}
 	delete(p.txs, id)
@@ -159,8 +173,13 @@ func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) erro
 	return lastID, err
 }
 
-func (s *Store) DeletePendingTx(id ID) error {
+func (s *Store) DeletePendingTx(id ID, hook func(txn *badger.Txn) error) error {
 	return s.db.Update(func(txn *badger.Txn) error {
+		if hook != nil {
+			if err := hook(txn); err != nil {
+				return err
+			}
+		}
 		return txn.Delete(PendingTxKey(id))
 	})
 }

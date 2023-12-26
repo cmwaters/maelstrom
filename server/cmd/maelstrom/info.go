@@ -26,10 +26,10 @@ var infoCmd = &cobra.Command{
 		conn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			// if the server is not running, access the db directly
-			if _, err := os.Stat(storeName); os.IsNotExist(err) {
+			if _, err := os.Stat(server.StoreName); os.IsNotExist(err) {
 				return fmt.Errorf("account store not found, please run `maelstrom init`")
 			}
-			db, err := badger.Open(badger.DefaultOptions(storeName))
+			db, err := badger.Open(badger.DefaultOptions(server.StoreName))
 			if err != nil {
 				return err
 			}

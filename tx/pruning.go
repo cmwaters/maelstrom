@@ -1,12 +1,5 @@
 package tx
 
-import (
-	"encoding/binary"
-
-	"github.com/cmwaters/maelstrom/account"
-	"github.com/dgraph-io/badger"
-)
-
 // TODO: make configurable
 const deepPruneFrequency = 1_000
 const expiredTxPrunePeriod = 10_000 // roughly every 2 days given 15 second block time
@@ -44,7 +37,6 @@ func (p *Pool) prunePending(height Height) (int, error) {
 		return 0, err
 	}
 	for _, tx := range txsToExpire {
-		p.onFailure(tx.id, tx.signer, tx.fee)
 		delete(p.txs, tx.id)
 		delete(p.txByHash, string(tx.hash))
 		p.expiredTxMap[tx.id] = height
@@ -66,59 +58,4 @@ func (p *Pool) pruneExpired(height Height) error {
 		delete(p.expiredTxMap, txKey)
 	}
 	return nil
-}
-
-func (s *Store) MarkExpired(txs []*Tx, height Height) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		for _, tx := range txs {
-			if err := markExpired(txn, tx.id, height); err != nil {
-				return err
-			}
-
-			// refund the fee back to the user
-			if _, err := account.UpdateBalance(txn, tx.signer, tx.fee, true); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-}
-
-func markExpired(txn *badger.Txn, key ID, height Height) error {
-	heightBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(heightBytes, uint64(height))
-
-	if err := txn.Set(ExpiredTxKey(key), heightBytes); err != nil {
-		return err
-	}
-	if err := txn.Delete(PendingTxKey(key)); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Store) GetExpired(id ID) (uint64, error) {
-	var height uint64
-	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(ExpiredTxKey(id))
-		if err != nil {
-			return err
-		}
-		return item.Value(func(val []byte) error {
-			height = binary.BigEndian.Uint64(val)
-			return nil
-		})
-	})
-	return height, err
-}
-
-func (s *Store) DeleteExpiredTxs(ids []ID) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		for _, id := range ids {
-			if err := txn.Delete(ExpiredTxKey(id)); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
 }

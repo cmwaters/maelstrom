@@ -30,7 +30,8 @@ func (s *Server) broadcastTx() error {
 	gas := blob.DefaultEstimateGas(blobSizes(blobs))
 	fee := uint64(math.Ceil(float64(gas) * s.feeMonitor.GasPrice()))
 
-	timeoutHeight := s.store.GetHeight() + heightTimeout
+	currentHeight := s.store.GetHeight()
+	timeoutHeight := currentHeight + heightTimeout
 	txBytes, err := s.signer.CreatePayForBlob(
 		blobs,
 		user.SetGasLimit(gas),
@@ -42,7 +43,8 @@ func (s *Server) broadcastTx() error {
 		return nil
 	}
 
-	if err := s.pool.BatchTxs(tx.GetIDs(txs), tx.BatchID(txBytes)); err != nil {
+	batchID := tx.GetBatchID(txBytes)
+	if err := s.pool.MarkBroadcasted(batchID, tx.GetIDs(txs), tx.Height(currentHeight)); err != nil {
 		s.log.Error().Err(err).Msg("failed to batch txs")
 		return nil
 	}
@@ -50,23 +52,12 @@ func (s *Server) broadcastTx() error {
 	resp, err := s.signer.BroadcastTx(context.Background(), txBytes)
 	if err != nil {
 		s.log.Error().Err(err).Msg("failed to broadcast pay for blob")
-		s.markTxsAsFailed(txs)
-		return nil
-	}
-	if resp.Code != 0 {
+		return s.pool.MarkFailed(batchID, tx.Height(currentHeight))
+	} else if resp.Code != 0 {
 		s.log.Error().Uint32("code", resp.Code).Str("raw log", resp.RawLog).Msg("failed to submit pay for blob")
-		s.markTxsAsFailed(txs)
-		return nil
+		return s.pool.MarkFailed(batchID, tx.Height(currentHeight))
 	}
-
-	// mark the transaction as broadcasted.
-	// FIXME: An error here is fatal because we have submitted a transaction
-	// but have failed to record it in the database which means if it is not committed
-	// we can't detect it and return the balance to the user.
-	return s.pool.MarkBroadcasted(tx.BatchID(resp.TxHash), tx.Height(resp.Height))
-}
-
-func (s *Server) markTxsAsFailed(txs []*tx.Tx) {
+	return nil
 }
 
 func blobSizes(blobs []*tmproto.Blob) []uint32 {

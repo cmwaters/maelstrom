@@ -2,7 +2,9 @@ package tx
 
 import (
 	"github.com/cmwaters/maelstrom/account"
+	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/dgraph-io/badger"
+	"google.golang.org/protobuf/proto"
 )
 
 func (p *Pool) WasBroadcasted(batchID BatchID) bool {
@@ -13,13 +15,14 @@ func (p *Pool) WasBroadcasted(batchID BatchID) bool {
 	return ok
 }
 
-func (p *Pool) MarkBroadcasted(batchID BatchID, height Height) error {
+func (p *Pool) MarkBroadcasted(batchID BatchID, ids []ID, height Height) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	if err := p.store.MarkBroadcasted(batchID, height); err != nil {
+	if err := p.store.MarkBroadcasted(batchID, ids, height); err != nil {
 		return err
 	}
+	p.batchTxs(ids, batchID)
 	p.broadcastMap[batchID] = height
 	return nil
 }
@@ -58,12 +61,21 @@ func (p *Pool) checkBroadcastTimeouts(height Height) (int, error) {
 	return len(failedTxs), nil
 }
 
-func (s *Store) MarkBroadcasted(batchID BatchID, height Height) error {
+func (s *Store) MarkBroadcasted(batchID BatchID, ids []ID, height Height) error {
 	return s.db.Update(func(txn *badger.Txn) error {
-		_, err := txn.Get(BatchKey(batchID))
+		batch := &wire.Batch{TxIds: make([]uint64, len(ids))}
+		for i, key := range ids {
+			batch.TxIds[i] = uint64(key)
+		}
+		batchBytes, err := proto.Marshal(batch)
 		if err != nil {
 			return err
 		}
+
+		if err := txn.Set(BatchKey(batchID), batchBytes); err != nil {
+			return err
+		}
+
 		return txn.Set(BroadcastedBatchKey(batchID), height.Bytes())
 	})
 }

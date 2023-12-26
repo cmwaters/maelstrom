@@ -7,13 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	configFileName = "config.toml"
-	keyringDirName = "keys"
-	keyName        = "master"
-	storeName      = "maelstrom"
-)
-
 func main() {
 	cmd := &cobra.Command{
 		Use:   "maelstrom",
