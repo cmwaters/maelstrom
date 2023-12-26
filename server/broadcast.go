@@ -15,7 +15,7 @@ const heightTimeout = 5
 
 func (s *Server) broadcastTx() error {
 	txs := s.pool.Pull(s.feeMonitor.GasPrice(), blob.PFBGasFixedCost)
-	if txs == nil || len(txs) == 0 {
+	if len(txs) == 0 {
 		// nothing to broadcast, so skip
 		return nil
 	}

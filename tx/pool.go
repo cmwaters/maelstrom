@@ -73,7 +73,7 @@ func (p *Pool) Status(id ID) *wire.StatusResponse {
 		tx := p.txs[id]
 		resp.InsertHeight = uint64(tx.insertHeight)
 		resp.ExpiryHeight = uint64(tx.insertHeight) + tx.timeoutBlocks
-	case  wire.StatusResponse_BROADCASTING:
+	case wire.StatusResponse_BROADCASTING:
 		tx := p.txs[id]
 		resp.InsertHeight = uint64(tx.insertHeight)
 		resp.ExpiryHeight = uint64(p.broadcastMap[p.reverseBatchMap[id]])
@@ -85,7 +85,7 @@ func (p *Pool) Status(id ID) *wire.StatusResponse {
 	return resp
 }
 
-func (p Pool) getStatus(id ID) wire.StatusResponse_Status {
+func (p *Pool) getStatus(id ID) wire.StatusResponse_Status {
 	_, isPending := p.txs[id]
 	if isPending {
 		BatchID, isBatched := p.reverseBatchMap[id]

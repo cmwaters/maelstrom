@@ -38,9 +38,12 @@ func (s *Store) MarkCommitted(txn *badger.Txn, txIds []ID, txHash []byte) error 
 		}
 
 		var tx wire.Tx
-		item.Value(func(val []byte) error {
+		err = item.Value(func(val []byte) error {
 			return proto.Unmarshal(val, &tx)
 		})
+		if err != nil {
+			return err
+		}
 		newTx := &wire.Tx{
 			Signer: tx.Signer,
 			Fee:    tx.Fee,
