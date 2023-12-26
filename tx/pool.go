@@ -34,7 +34,7 @@ type Pool struct {
 	nonceMap        map[uint64]BatchID
 	broadcastMap    map[BatchID]Height
 	expiredTxMap    map[ID]Height
-	committedTxMap  map[ID]BatchID
+	committedTxMap  map[ID][]byte
 
 	// persist the things that matter, the rest stays in memory
 	store *Store
@@ -54,17 +54,38 @@ func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 		nonceMap:        make(map[uint64]BatchID),
 		broadcastMap:    make(map[BatchID]Height),
 		expiredTxMap:    make(map[ID]Height),
-		committedTxMap:  make(map[ID]BatchID),
+		committedTxMap:  make(map[ID][]byte),
 		pendingQueue:    make([]*Tx, 0),
 		store:           store,
 		latestHeight:    Height(latestHeight),
 	}, nil
 }
 
-func (p *Pool) Status(id ID) wire.StatusResponse_Status {
+func (p *Pool) Status(id ID) *wire.StatusResponse {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
+	resp := &wire.StatusResponse{
+		Status: p.getStatus(id),
+	}
+	switch resp.Status {
+	case wire.StatusResponse_PENDING:
+		tx := p.txs[id]
+		resp.InsertHeight = uint64(tx.insertHeight)
+		resp.ExpiryHeight = uint64(tx.insertHeight) + tx.timeoutBlocks
+	case  wire.StatusResponse_BROADCASTING:
+		tx := p.txs[id]
+		resp.InsertHeight = uint64(tx.insertHeight)
+		resp.ExpiryHeight = uint64(p.broadcastMap[p.reverseBatchMap[id]])
+	case wire.StatusResponse_EXPIRED:
+		resp.ExpiryHeight = uint64(p.expiredTxMap[id])
+	case wire.StatusResponse_COMMITTED:
+		resp.TxHash = p.committedTxMap[id]
+	}
+	return resp
+}
+
+func (p Pool) getStatus(id ID) wire.StatusResponse_Status {
 	_, isPending := p.txs[id]
 	if isPending {
 		BatchID, isBatched := p.reverseBatchMap[id]

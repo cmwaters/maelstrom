@@ -97,12 +97,14 @@ func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
 			switch resp.Status {
 			case maelstrom.StatusResponse_COMMITTED:
 				return resp.TxHash, nil
-			case maelstrom.StatusResponse_PENDING:
+			case maelstrom.StatusResponse_PENDING, maelstrom.StatusResponse_BROADCASTING:
 				continue
 			case maelstrom.StatusResponse_EXPIRED:
 				return nil, fmt.Errorf("tx expired at height %d without being committed", resp.ExpiryHeight)
+			case maelstrom.StatusResponse_UNKNOWN:
+				return nil, fmt.Errorf("tx with id %d not found", id)
 			default:
-				return nil, fmt.Errorf("no tx with id %d exists", id)
+				return nil, fmt.Errorf("unknown status %v", resp.Status)
 
 			}
 		}

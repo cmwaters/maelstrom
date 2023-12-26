@@ -64,7 +64,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	releaser := node.NewReleaser(client, 10*time.Second, s.broadcastTx)
+	releaser := node.NewReleaser(client, s.config.TimeoutCommit-time.Second, s.broadcastTx)
 
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterBlobServer(grpcServer, s)
@@ -170,7 +170,7 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 		return nil, fmt.Errorf("insufficient balance for signer %s, (have %d, require %d)", req.Signer, acc.Balance, req.Fee)
 	}
 
-	key, err := s.pool.Add(req.Signer, req.Namespace, req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
+	key, err := s.pool.Add(req.Signer, req.Namespace[1:], req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
 	if err != nil {
 		return nil, err
 	}
@@ -180,14 +180,7 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 
 func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*maelstrom.StatusResponse, error) {
 	status := s.pool.Status(tx.ID(req.Id))
-	resp := &maelstrom.StatusResponse{
-		Status: status,
-	}
-	switch status {
-	case maelstrom.StatusResponse_PENDING:
-	default:
-	}
-	return resp, nil
+	return status, nil
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {

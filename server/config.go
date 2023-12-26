@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
+	"github.com/celestiaorg/celestia-app/pkg/appconsts"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/cmwaters/maelstrom/account"
 	"github.com/cmwaters/maelstrom/node"
@@ -39,7 +41,8 @@ type Config struct {
 	CelestiaRPCAddress  string `toml:"celestia_rpc_address"`
 	CelestiaGRPCAddress string `toml:"celestia_grpc_address"`
 	keyring             keyring.Keyring
-	KeyringName         string `toml:"keyring_name"`
+	KeyringName         string        `toml:"keyring_name"`
+	TimeoutCommit       time.Duration `toml:"timeout_commit"`
 }
 
 func DefaultConfig() *Config {
@@ -48,6 +51,7 @@ func DefaultConfig() *Config {
 		CelestiaRPCAddress:  "http://127.0.0.1:26657",
 		CelestiaGRPCAddress: "localhost:9090",
 		KeyringName:         DefaultKeyName,
+		TimeoutCommit:       appconsts.TimeoutCommit,
 	}
 }
 

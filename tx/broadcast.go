@@ -15,15 +15,15 @@ func (p *Pool) WasBroadcasted(batchID BatchID) bool {
 	return ok
 }
 
-func (p *Pool) MarkBroadcasted(batchID BatchID, ids []ID, height Height) error {
+func (p *Pool) MarkBroadcasted(batchID BatchID, ids []ID, timeoutHeight Height) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	if err := p.store.MarkBroadcasted(batchID, ids, height); err != nil {
+	if err := p.store.MarkBroadcasted(batchID, ids, timeoutHeight); err != nil {
 		return err
 	}
 	p.batchTxs(ids, batchID)
-	p.broadcastMap[batchID] = height
+	p.broadcastMap[batchID] = timeoutHeight
 	return nil
 }
 
@@ -52,6 +52,7 @@ func (p *Pool) checkBroadcastTimeouts(height Height) (int, error) {
 		delete(p.txs, tx.id)
 		delete(p.reverseBatchMap, tx.id)
 		delete(p.txByHash, string(tx.Hash()))
+		p.expiredTxMap[tx.id] = height
 	}
 
 	for _, batch := range failedBatches {

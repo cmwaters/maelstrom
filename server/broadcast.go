@@ -15,6 +15,10 @@ const heightTimeout = 5
 
 func (s *Server) broadcastTx() error {
 	txs := s.pool.Pull(s.feeMonitor.GasPrice(), blob.PFBGasFixedCost)
+	if txs == nil || len(txs) == 0 {
+		// nothing to broadcast, so skip
+		return nil
+	}
 	blobs := make([]*tmproto.Blob, 0)
 	for _, tx := range txs {
 		for _, blob := range tx.Blobs() {
@@ -44,7 +48,7 @@ func (s *Server) broadcastTx() error {
 	}
 
 	batchID := tx.GetBatchID(txBytes)
-	if err := s.pool.MarkBroadcasted(batchID, tx.GetIDs(txs), tx.Height(currentHeight)); err != nil {
+	if err := s.pool.MarkBroadcasted(batchID, tx.GetIDs(txs), tx.Height(timeoutHeight)); err != nil {
 		s.log.Error().Err(err).Msg("failed to batch txs")
 		return nil
 	}
@@ -57,6 +61,11 @@ func (s *Server) broadcastTx() error {
 		s.log.Error().Uint32("code", resp.Code).Str("raw log", resp.RawLog).Msg("failed to submit pay for blob")
 		return s.pool.MarkFailed(batchID, tx.Height(currentHeight))
 	}
+	s.log.Info().
+		Str("tx hash", batchID.HEX()).
+		Int("txs", len(txs)).
+		Uint64("fee", fee).
+		Msg("broadcasted pay for blob")
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/tendermint/tendermint/rpc/client"
+	"github.com/tendermint/tendermint/types"
 )
 
 // TriggerFn is the function that is invoked by the releaser. An error
@@ -34,7 +35,7 @@ func (r *Releaser) Start(ctx context.Context) error {
 
 	errCh := make(chan error)
 
-	eventsCh, err := r.client.Subscribe(ctx, "releaser", "tm.events.type='NewBlockHeader'")
+	eventsCh, err := r.client.Subscribe(ctx, "releaser", types.EventQueryNewBlockHeader.String())
 	if err != nil {
 		return err
 	}

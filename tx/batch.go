@@ -2,6 +2,7 @@ package tx
 
 import (
 	"crypto/sha256"
+	"fmt"
 
 	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/dgraph-io/badger"
@@ -13,10 +14,21 @@ func GetBatchID(tx []byte) BatchID {
 	return BatchID(hash[:])
 }
 
+func Hash(b []byte) []byte {
+	hash := sha256.Sum256(b)
+	return hash[:]
+}
+
+// BatchID is the sha256 hash of the raw blob tx that is submitted
+// and committed in a block
 type BatchID string
 
 func (b BatchID) Bytes() []byte {
 	return []byte(b)
+}
+
+func (b BatchID) HEX() string {
+	return fmt.Sprintf("%X", b)
 }
 
 func (p *Pool) batchTxs(ids []ID, batchID BatchID) {

@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog"
 	"github.com/tendermint/tendermint/rpc/client"
+	"github.com/tendermint/tendermint/types"
 
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
@@ -107,7 +108,13 @@ func Sync(
 		for _, blockTx := range blockTxs {
 			batchID := tx.GetBatchID(blockTx)
 			if pool.WasBroadcasted(batchID) {
-				if err := pool.CommitBatch(txn, batchID, tx.Height(height)); err != nil {
+				blobTx, isBlobTx := types.UnmarshalBlobTx(blockTx)
+				if !isBlobTx {
+					panic("maelstrom registers a broadcasted tx that is not a blob tx")
+				}
+				pfbHash := tx.Hash(blobTx.Tx)
+
+				if err := pool.CommitBatch(txn, batchID, pfbHash, tx.Height(height)); err != nil {
 					return err
 				}
 				committedCounter++
@@ -132,6 +139,7 @@ func Sync(
 			Int("confirmed_txs", committedCounter).
 			Int("failed_txs", failedTxs).
 			Int("deposits", len(sendTxs)).
+			Int("total_txs", len(blockTxs)).
 			Msg("processed block")
 	}
 

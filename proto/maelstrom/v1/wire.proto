@@ -17,4 +17,5 @@ message Tx {
     string signer = 1;
     uint64 fee = 2;
     bytes tx_hash = 3;
+    uint64 height_committed = 4;
 }

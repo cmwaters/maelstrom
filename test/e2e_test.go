@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"testing"
@@ -26,11 +27,13 @@ func TestEndToEnd(t *testing.T) {
 	nctx, rpcAddr, grpcAddr := testnode.NewNetwork(t, cfg)
 	err := nctx.WaitForNextBlock()
 	require.NoError(t, err)
+	require.Equal(t, cfg.TmConfig.TxIndex.Indexer, "kv")
 
 	config := server.DefaultConfig().WithDir(t.TempDir()).WithKeyring(nctx.Keyring)
 	config.CelestiaGRPCAddress = grpcAddr
 	config.CelestiaRPCAddress = rpcAddr
 	config.KeyringName = serverAcc
+	config.TimeoutCommit = cfg.TmConfig.Consensus.TimeoutCommit
 
 	server, err := config.NewServer(testCtx)
 	require.NoError(t, err)
@@ -78,13 +81,23 @@ func TestEndToEnd(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, coins, newBalance)
 
-	blob := make([]byte, 1024)
+	size := 4 * 1024 // 4Kb
+	blob := make([]byte, size)
 	_, err = rand.Read(blob)
 	require.NoError(t, err)
-	id, err := client.Submit(testCtx, []byte("maelstrom"), [][]byte{blob}, 1500)
+	fee := uint64(100_000)
+	id, err := client.Submit(testCtx, []byte("maelstrom"), [][]byte{blob}, fee)
 	require.NoError(t, err)
 
 	hash, err := client.Confirm(testCtx, id)
 	require.NoError(t, err)
-	t.Log(hash)
+
+	res, err := nctx.Client.Tx(testCtx, hash, false)
+	require.NoError(t, err)
+	require.Equal(t, res.TxResult.Code, uint32(0))
+
+	block, err := nctx.Client.Block(testCtx, &res.Height)
+	require.NoError(t, err)
+	require.Len(t, block.Block.Txs, 1)
+	require.True(t, bytes.Contains(block.Block.Txs[0], blob))
 }
