@@ -19,6 +19,8 @@ func (h Height) Bytes() []byte {
 	return heightBytes
 }
 
+const defaultCacheSize = 1000
+
 type Pool struct {
 	mtx          sync.Mutex
 	latestHeight Height
@@ -45,8 +47,7 @@ func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: we need to load all the persisted values from the store
-	return &Pool{
+	pool := &Pool{
 		txs:             make(map[ID]*Tx),
 		txByHash:        make(map[string]ID),
 		batchMap:        make(map[BatchID][]ID),
@@ -58,7 +59,11 @@ func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 		pendingQueue:    make([]*Tx, 0),
 		store:           store,
 		latestHeight:    Height(latestHeight),
-	}, nil
+	}
+	if err := pool.load(pool.latestHeight, defaultCacheSize); err != nil {
+		return nil, err
+	}
+	return pool, nil
 }
 
 func (p *Pool) Status(id ID) *wire.StatusResponse {
@@ -130,4 +135,34 @@ func (p *Pool) getTxs(ids []ID) []*Tx {
 		txs[i] = p.txs[id]
 	}
 	return txs
+}
+
+func (p *Pool) load(height Height, cacheSize int) error {
+	lastKey, err := p.store.GetLastTxKey()
+	if err != nil {
+		return err
+	}
+
+	expiredTxs, err := p.store.RefundLostPendingTxs(height)
+	if err != nil {
+		return err
+	}
+	for id, height := range expiredTxs {
+		p.expiredTxMap[id] = height
+	}
+
+	limitID := ID(0)
+	if uint64(lastKey) > uint64(cacheSize) {
+		limitID = lastKey - ID(cacheSize)
+	}
+
+	commitedTxs, err := p.store.GetMostRecentCommittedTxs(limitID)
+	if err != nil {
+		return err
+	}
+	for id, tx := range commitedTxs {
+		p.committedTxMap[id] = tx.TxHash
+	}
+
+	return p.loadLastExpiredTxs(limitID)
 }

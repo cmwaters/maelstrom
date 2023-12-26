@@ -114,7 +114,7 @@ func (s *Server) Serve(ctx context.Context) error {
 func (s *Server) Wait() {
 	initialHeight := s.store.GetHeight()
 	ticker := time.NewTicker(100 * time.Millisecond)
-	for _ = range ticker.C {
+	for range ticker.C {
 		newHeight := s.store.GetHeight()
 		if newHeight > initialHeight {
 			return

@@ -113,33 +113,6 @@ func (s *Store) GetPendingTx(id ID) (*wire.Tx, error) {
 	return pendingTx, err
 }
 
-func (s *Store) GetAllPendingTxs() (map[ID]*wire.Tx, error) {
-	pendingTxs := make(map[ID]*wire.Tx)
-	err := s.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.Prefix = []byte{PendingTxPrefix}
-		it := txn.NewIterator(opts)
-		defer it.Close()
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-			key := TxIDFromBytes(item.Key())
-			var pendingTx *wire.Tx
-			err := item.Value(func(val []byte) error {
-				if err := proto.Unmarshal(val, pendingTx); err != nil {
-					return err
-				}
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-			pendingTxs[key] = pendingTx
-		}
-		return nil
-	})
-	return pendingTxs, err
-}
-
 func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) error) (ID, error) {
 	var lastID ID
 	err := s.db.Update(func(txn *badger.Txn) error {
@@ -148,14 +121,14 @@ func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) erro
 			return err
 		}
 
-		item, err := txn.Get(LastTxKey())
+		item, err := txn.Get(LastTxIDKey())
 		if err != nil {
 			return err
 		}
 
 		err = item.Value(func(val []byte) error {
 			lastID = TxIDFromBytes(val)
-			return txn.Set(LastTxKey(), PendingTxKey(lastID+1))
+			return txn.Set(LastTxIDKey(), PendingTxKey(lastID+1))
 		})
 		if err != nil {
 			return err
@@ -182,4 +155,41 @@ func (s *Store) DeletePendingTx(id ID, hook func(txn *badger.Txn) error) error {
 		}
 		return txn.Delete(PendingTxKey(id))
 	})
+}
+
+func (s *Store) RefundLostPendingTxs(height Height) (map[ID]Height, error) {
+	expiredTxMap := make(map[ID]Height)
+	err := s.db.Update(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Seek([]byte{PendingTxPrefix}); it.ValidForPrefix([]byte{PendingTxPrefix}); it.Next() {
+			item := it.Item()
+			txID := TxIDFromBytes(item.Key())
+			if err := markExpired(txn, txID, height); err != nil {
+				return err
+			}
+			var tx wire.Tx
+			err := item.Value(func(val []byte) error {
+				return proto.Unmarshal(val, &tx)
+			})
+			if err != nil {
+				return err
+			}
+
+			// refund the fee back to the user
+			if _, err := account.UpdateBalance(txn, tx.Signer, tx.Fee, true); err != nil {
+				return err
+			}
+
+			expiredTxMap[txID] = height
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return expiredTxMap, nil
 }

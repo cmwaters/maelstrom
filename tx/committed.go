@@ -90,3 +90,28 @@ func (s *Store) DeleteCommittedTxs(ids []ID) error {
 		return nil
 	})
 }
+
+func (s *Store) GetMostRecentCommittedTxs(limit ID) (map[ID]*wire.Tx, error) {
+	var txs = make(map[ID]*wire.Tx)
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Seek(CommittedTxKey(limit)); it.ValidForPrefix([]byte{CommittedTxPrefix}); it.Next() {
+			item := it.Item()
+			var tx wire.Tx
+			err := item.Value(func(val []byte) error {
+				return proto.Unmarshal(val, &tx)
+			})
+			if err != nil {
+				return err
+			}
+			txID := TxIDFromBytes(item.Key())
+			txs[txID] = &tx
+		}
+		return nil
+	})
+	return txs, err
+}

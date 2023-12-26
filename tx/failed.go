@@ -34,6 +34,17 @@ func (p *Pool) MarkFailed(batchID BatchID, height Height) error {
 	return nil
 }
 
+func (p *Pool) loadLastExpiredTxs(limit ID) error {
+	expiredTxs, err := p.store.LoadRecentlyExpiredTxs(limit)
+	if err != nil {
+		return err
+	}
+	for id, height := range expiredTxs {
+		p.expiredTxMap[id] = height
+	}
+	return nil
+}
+
 func (s *Store) MarkFailed(batchID BatchID, txs []*Tx, height Height) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		for _, tx := range txs {
@@ -104,4 +115,34 @@ func (s *Store) DeleteExpiredTxs(ids []ID) error {
 		}
 		return nil
 	})
+}
+
+func (s *Store) LoadRecentlyExpiredTxs(limit ID) (map[ID]Height, error) {
+	expiredTxMap := make(map[ID]Height)
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Seek(ExpiredTxKey(limit)); it.ValidForPrefix([]byte{ExpiredTxPrefix}); it.Next() {
+			item := it.Item()
+			txID := TxIDFromBytes(item.Key())
+			var height uint64
+			err := item.Value(func(val []byte) error {
+				height = binary.BigEndian.Uint64(val)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+
+			expiredTxMap[txID] = Height(height)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return expiredTxMap, nil
 }

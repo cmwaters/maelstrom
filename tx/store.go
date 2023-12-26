@@ -35,7 +35,7 @@ func NewStore(db *badger.DB) (*Store, error) {
 func (s *Store) GetLastTxKey() (ID, error) {
 	var txID ID
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(LastTxKey())
+		item, err := txn.Get(LastTxIDKey())
 		if err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func (s *Store) GetLastTxKey() (ID, error) {
 	return txID, err
 }
 
-func LastTxKey() []byte {
+func LastTxIDKey() []byte {
 	return []byte{LastTxIDPrefix}
 }
 
@@ -91,9 +91,9 @@ func TxIDFromBytes(b []byte) ID {
 
 func checkAndSetTxKey(db *badger.DB) error {
 	return db.Update(func(txn *badger.Txn) error {
-		_, err := txn.Get(LastTxKey())
+		_, err := txn.Get(LastTxIDKey())
 		if errors.Is(err, badger.ErrKeyNotFound) {
-			return txn.Set(LastTxKey(), PendingTxKey(StartingTxNumber))
+			return txn.Set(LastTxIDKey(), PendingTxKey(StartingTxNumber))
 		}
 		return err
 	})
