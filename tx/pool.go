@@ -28,6 +28,7 @@ const defaultCacheSize = 1000
 type Pool struct {
 	mtx          sync.Mutex
 	latestHeight Height
+	cacheID      ID
 	totalGas     uint64
 	totalFee     uint64
 	txs          map[ID]*Tx
@@ -151,6 +152,7 @@ func (p *Pool) load(height Height, cacheSize int) error {
 	if uint64(lastKey) > uint64(cacheSize) {
 		limitID = lastKey - ID(cacheSize)
 	}
+	p.cacheID = limitID
 
 	commitedTxs, err := p.store.GetMostRecentCommittedTxs(limitID)
 	if err != nil {

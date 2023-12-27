@@ -1,8 +1,12 @@
 package account
 
 import (
+	"errors"
+
 	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
 	crypto "github.com/cosmos/cosmos-sdk/crypto/types"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,11 +29,22 @@ func NewAccountFromBytes(bz []byte) (*Account, error) {
 		return nil, err
 	}
 
-	// FIXME: we only support secp256k1 keys for now.
-	// Need to eventually generalize this
 	var pk crypto.PubKey
 	if acc.PubKey != nil {
-		pk = &secp256k1.PubKey{Key: acc.PubKey}
+		switch acc.PubKeyType {
+		case maelstrom.Account_SECP256K1:
+			pk = &secp256k1.PubKey{Key: acc.PubKey}
+		case maelstrom.Account_SECP256R1:
+			spk := &secp256r1.PubKey{}
+			if err := spk.Key.Unmarshal(acc.PubKey); err != nil {
+				return nil, err
+			}
+			pk = spk
+		case maelstrom.Account_ED25519:
+			pk = &ed25519.PubKey{Key: acc.PubKey}
+		default:
+			return nil, errors.New("unsupported public key type")
+		}
 	}
 
 	return &Account{

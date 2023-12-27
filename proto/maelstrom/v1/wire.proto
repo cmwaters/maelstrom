@@ -7,6 +7,13 @@ option go_package = "github.com/cmwaters/maelstrom";
 message Account {
     uint64 balance = 1;
     bytes pub_key = 2;
+    enum PubKeyType {
+        UNKNOWN = 0;
+        SECP256R1 = 1;
+        SECP256K1 = 2;
+        ED25519 = 3;
+    }
+    PubKeyType pub_key_type = 3;
 }
 
 message Batch {

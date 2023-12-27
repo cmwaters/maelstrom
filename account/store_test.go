@@ -24,6 +24,7 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 
 	// Create a new account
 	account := account.NewAccount(pubKey, 100)
+	require.NoError(t, err)
 
 	// Set the account in the store
 	err = store.SetAccount(address, account)

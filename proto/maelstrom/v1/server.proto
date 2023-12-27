@@ -19,9 +19,6 @@ service Blob {
     rpc Balance(BalanceRequest) returns (BalanceResponse) {
         option (google.api.http) = { get: "/v1/balance/{address}" };
     }
-    rpc Deposit(DepositRequest) returns (DepositResponse) {
-        option (google.api.http) = { post: "/v1/deposit", body: "*" };
-    }
     rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
         option (google.api.http) = { post: "/v1/withdraw", body: "*" };
     }
@@ -87,14 +84,6 @@ message BalanceRequest {
 message BalanceResponse {
     uint64 balance = 1;
 }
-
-message DepositRequest {
-    string signer = 1;
-    uint64 amount = 2;
-    bytes signature = 3;
-}
-
-message DepositResponse {}
 
 message WithdrawRequest {
     string signer = 1;

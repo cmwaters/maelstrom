@@ -93,7 +93,6 @@ func BatchIDFromBytes(b []byte) BatchID {
 	return BatchID(b[1:])
 }
 
-
 func checkAndSetTxKey(db *badger.DB) error {
 	return db.Update(func(txn *badger.Txn) error {
 		_, err := txn.Get(LastTxIDKey())

@@ -56,7 +56,7 @@ func (c *Client) Deposit(ctx context.Context, coins uint64) error {
 			ToAddress:   toAdress,
 			Amount:      sdk.NewCoins(sdk.NewInt64Coin(app.BondDenom, int64(coins))),
 		},
-	}, user.SetGasLimitAndFee(200_000, 0.1))
+	}, user.SetGasLimitAndFee(200_000, resp.MinGasPrice))
 	return err
 }
 
