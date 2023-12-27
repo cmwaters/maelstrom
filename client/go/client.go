@@ -84,7 +84,7 @@ func (c *Client) Submit(ctx context.Context, namespace []byte, blobs [][]byte, f
 }
 
 func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTimer(0)
 	for {
 		select {
 		case <-ctx.Done():
@@ -94,10 +94,12 @@ func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
+			fmt.Println(resp.Status)
 			switch resp.Status {
 			case maelstrom.StatusResponse_COMMITTED:
 				return resp.TxHash, nil
 			case maelstrom.StatusResponse_PENDING, maelstrom.StatusResponse_BROADCASTING:
+				ticker.Reset(time.Second)
 				continue
 			case maelstrom.StatusResponse_EXPIRED:
 				return nil, fmt.Errorf("tx expired at height %d without being committed", resp.ExpiryHeight)
@@ -109,4 +111,17 @@ func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
 			}
 		}
 	}
+}
+
+func (c *Client) Cancel(ctx context.Context, id uint64) error {
+	msg := server.CancelRequestSignOverData(c.signer.Address().String(), id)
+	signature, _, err := c.keys.SignByAddress(c.signer.Address(), msg)
+	if err != nil {
+		return err
+	}
+	_, err = c.client.Cancel(ctx, &maelstrom.CancelRequest{
+		Id:        id,
+		Signature: signature,
+	})
+	return err
 }

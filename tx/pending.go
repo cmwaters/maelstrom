@@ -66,6 +66,9 @@ func (p *Pool) Cancel(id ID) error {
 	if !ok {
 		return fmt.Errorf("tx not found")
 	}
+	if _, ok := p.reverseBatchMap[id]; ok {
+		return fmt.Errorf("tx has already been broadcasted")
+	}
 	refund := func(txn *badger.Txn) error {
 		// refund the fee back to the user
 		_, err := account.UpdateBalance(txn, tx.signer, tx.fee, true)
@@ -99,6 +102,13 @@ func (p *Pool) Pull(gasPrice float64, fixedPFBGas uint64) []*Tx {
 	return nil
 }
 
+func (p *Pool) GetPendingTx(id ID) *Tx {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	return p.txs[id]
+}
+
 func (s *Store) GetPendingTx(id ID) (*wire.Tx, error) {
 	var pendingTx *wire.Tx
 	err := s.db.View(func(txn *badger.Txn) error {
@@ -123,15 +133,20 @@ func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) erro
 
 		item, err := txn.Get(LastTxIDKey())
 		if err != nil {
-			return err
+			return fmt.Errorf("getting last tx id: %w", err)
 		}
 
 		err = item.Value(func(val []byte) error {
 			lastID = TxIDFromBytes(val)
-			return txn.Set(LastTxIDKey(), PendingTxKey(lastID+1))
+			fmt.Println("lastID", lastID)
+			return nil
 		})
 		if err != nil {
 			return err
+		}
+
+		if err := txn.Set(LastTxIDKey(), PendingTxKey(lastID+1)); err != nil {
+			return fmt.Errorf("incrementing last tx id: %w", err)
 		}
 
 		if err := txn.Set(PendingTxKey(lastID), bz); err != nil {
@@ -143,6 +158,7 @@ func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) erro
 		}
 		return nil
 	})
+	fmt.Println("returning lastID", lastID)
 	return lastID, err
 }
 

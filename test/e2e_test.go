@@ -13,18 +13,43 @@ import (
 	client "github.com/cmwaters/maelstrom/client/go"
 	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
+	"github.com/cmwaters/maelstrom/tx"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestEndToEnd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping e2e test")
+	}
+	suite.Run(t, new(EndToEndTestSuite))
+}
+
+const (
+	serverAcc = "server"
+	clientAcc = "client"
+)
+
+type EndToEndTestSuite struct {
+	suite.Suite
+	cancel context.CancelFunc
+
+	nctx   testnode.Context
+	server *server.Server
+	config *server.Config
+	client *client.Client
+}
+
+func (s *EndToEndTestSuite) SetupSuite() {
+	t := s.T()
 	testCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	serverAcc := "server"
-	clientAcc := "client"
+	s.cancel = cancel
 	cfg := testnode.DefaultConfig().WithAccounts([]string{serverAcc, clientAcc})
 	nctx, rpcAddr, grpcAddr := testnode.NewNetwork(t, cfg)
+	s.nctx = nctx
+
 	err := nctx.WaitForNextBlock()
 	require.NoError(t, err)
 	require.Equal(t, cfg.TmConfig.TxIndex.Indexer, "kv")
@@ -34,9 +59,11 @@ func TestEndToEnd(t *testing.T) {
 	config.CelestiaRPCAddress = rpcAddr
 	config.KeyringName = serverAcc
 	config.TimeoutCommit = cfg.TmConfig.Consensus.TimeoutCommit
+	s.config = config
 
 	server, err := config.NewServer(testCtx)
 	require.NoError(t, err)
+	s.server = server
 
 	go func() {
 		err = server.Serve(testCtx)
@@ -45,19 +72,9 @@ func TestEndToEnd(t *testing.T) {
 
 	server.Wait()
 
-	resp, err := server.Info(testCtx, &maelstrom.InfoRequest{})
+	clientConn, err := grpc.Dial(s.config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-
-	record, err := nctx.Keyring.Key(serverAcc)
-	require.NoError(t, err)
-	addr, err := record.GetAddress()
-	require.NoError(t, err)
-	require.Equal(t, addr.String(), resp.Address)
-	require.Greater(t, resp.Height, uint64(1))
-
-	clientConn, err := grpc.Dial(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-	record, err = nctx.Keyring.Key(clientAcc)
+	record, err := nctx.Keyring.Key(clientAcc)
 	require.NoError(t, err)
 	clientAddr, err := record.GetAddress()
 	require.NoError(t, err)
@@ -66,38 +83,98 @@ func TestEndToEnd(t *testing.T) {
 	signer, err := user.SetupSigner(testCtx, nctx.Keyring, nctx.GRPCClient, clientAddr, cdc)
 	require.NoError(t, err)
 	c := maelstrom.NewBlobClient(clientConn)
-	client, err := client.New(nctx.Keyring, signer, c)
+	s.client, err = client.New(nctx.Keyring, signer, c)
 	require.NoError(t, err)
+}
 
-	balance, err := client.Balance(testCtx)
-	require.NoError(t, err)
-	require.Zero(t, balance)
+func (s *EndToEndTestSuite) TestA_Info() {
+	resp, err := s.server.Info(context.Background(), &maelstrom.InfoRequest{})
+	s.Require().NoError(err)
+
+	record, err := s.nctx.Keyring.Key(serverAcc)
+	s.Require().NoError(err)
+	addr, err := record.GetAddress()
+	s.Require().NoError(err)
+	s.Require().Equal(addr.String(), resp.Address)
+	s.Require().Greater(resp.Height, uint64(1))
+}
+
+func (s *EndToEndTestSuite) TestB_Deposit() {
+	ctx := context.Background()
+	balance, err := s.client.Balance(ctx)
+	s.Require().NoError(err)
+	s.Require().Zero(balance)
 
 	var coins uint64 = 1_000_000
-	err = client.Deposit(testCtx, coins)
-	require.NoError(t, err)
+	err = s.client.Deposit(ctx, coins)
+	s.Require().NoError(err)
 
-	newBalance, err := client.Balance(testCtx)
-	require.NoError(t, err)
-	require.Equal(t, coins, newBalance)
+	newBalance, err := s.client.Balance(ctx)
+	s.Require().NoError(err)
+	s.Require().Equal(coins, newBalance)
+}
+
+func (s *EndToEndTestSuite) TestC_Submit() {
+	previousBalance, err := s.client.Balance(context.Background())
+	s.Require().NoError(err)
 
 	size := 4 * 1024 // 4Kb
-	blob := make([]byte, size)
-	_, err = rand.Read(blob)
-	require.NoError(t, err)
+	blob := createBlob(size)
 	fee := uint64(100_000)
-	id, err := client.Submit(testCtx, []byte("maelstrom"), [][]byte{blob}, fee)
-	require.NoError(t, err)
+	id, err := s.client.Submit(context.Background(), []byte("maelstrom"), [][]byte{blob}, fee)
+	s.Require().NoError(err)
+	s.Require().EqualValues(tx.StartingTxNumber, id)
 
-	hash, err := client.Confirm(testCtx, id)
-	require.NoError(t, err)
+	// double submissions should be rejected
+	_, err = s.client.Submit(context.Background(), []byte("maelstrom"), [][]byte{blob}, fee)
+	s.Require().Error(err)
 
-	res, err := nctx.Client.Tx(testCtx, hash, false)
-	require.NoError(t, err)
-	require.Equal(t, res.TxResult.Code, uint32(0))
+	hash, err := s.client.Confirm(context.Background(), id)
+	s.Require().NoError(err)
 
-	block, err := nctx.Client.Block(testCtx, &res.Height)
-	require.NoError(t, err)
-	require.Len(t, block.Block.Txs, 1)
-	require.True(t, bytes.Contains(block.Block.Txs[0], blob))
+	res, err := s.nctx.Client.Tx(context.Background(), hash, false)
+	s.Require().NoError(err)
+	s.Require().Equal(res.TxResult.Code, uint32(0))
+
+	block, err := s.nctx.Client.Block(context.Background(), &res.Height)
+	s.Require().NoError(err)
+	s.Require().Len(block.Block.Txs, 1)
+	s.Require().True(bytes.Contains(block.Block.Txs[0], blob))
+
+	// test that the fees were deducted
+	balanceAfterTx, err := s.client.Balance(context.Background())
+	s.Require().NoError(err)
+	s.Require().Equal(balanceAfterTx, previousBalance-fee)
+}
+
+func (s *EndToEndTestSuite) TestD_Cancel() {
+	balanceBefore, err := s.client.Balance(context.Background())
+	s.Require().NoError(err)
+
+	blob := createBlob(2 * 1024)
+	fee := uint64(100_000)
+	id, err := s.client.Submit(context.Background(), []byte("maelstrom"), [][]byte{blob}, fee)
+	s.Require().NoError(err)
+	s.Require().EqualValues(tx.StartingTxNumber+1, id)
+
+	err = s.client.Cancel(context.Background(), id)
+	s.Require().NoError(err)
+
+	// TODO: we may want to create a cancelled status
+	_, err = s.client.Confirm(context.Background(), id)
+	s.Require().Error(err)
+
+	balanceAfter, err := s.client.Balance(context.Background())
+	s.Require().NoError(err)
+	s.Require().Equal(balanceBefore, balanceAfter)
+}
+
+func (s *EndToEndTestSuite) TearDownSuite() {
+	s.cancel()
+}
+
+func createBlob(size int) []byte {
+	blob := make([]byte, size)
+	_, _ = rand.Read(blob)
+	return blob
 }

@@ -1,6 +1,7 @@
 package tx
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 
@@ -76,10 +77,12 @@ func NonceKey(nonce uint64) []byte {
 }
 
 func storeKey(prefix byte, txID ID) []byte {
-	b := make([]byte, 9)
-	b[0] = prefix
-	binary.BigEndian.AppendUint64(b[1:], uint64(txID))
-	return b
+	buf := bytes.NewBuffer([]byte{prefix})
+	_, err := buf.Write(binary.BigEndian.AppendUint64(nil, uint64(txID)))
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }
 
 func TxIDFromBytes(b []byte) ID {

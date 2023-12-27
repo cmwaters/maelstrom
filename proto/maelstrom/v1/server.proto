@@ -19,6 +19,9 @@ service Blob {
     rpc Balance(BalanceRequest) returns (BalanceResponse) {
         option (google.api.http) = { get: "/v1/balance/{address}" };
     }
+    rpc Cancel(CancelRequest) returns (CancelResponse) {
+        option (google.api.http) = { post: "/v1/cancel", body: "*" };
+    }
     rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
         option (google.api.http) = { post: "/v1/withdraw", body: "*" };
     }
@@ -84,6 +87,13 @@ message BalanceRequest {
 message BalanceResponse {
     uint64 balance = 1;
 }
+
+message CancelRequest {
+    uint64 id = 1;
+    bytes signature = 2;
+}
+
+message CancelResponse {}
 
 message WithdrawRequest {
     string signer = 1;

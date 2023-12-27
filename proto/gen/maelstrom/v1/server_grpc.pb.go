@@ -23,6 +23,7 @@ const (
 	Blob_Submit_FullMethodName      = "/maelstrom.v1.Blob/Submit"
 	Blob_Status_FullMethodName      = "/maelstrom.v1.Blob/Status"
 	Blob_Balance_FullMethodName     = "/maelstrom.v1.Blob/Balance"
+	Blob_Cancel_FullMethodName      = "/maelstrom.v1.Blob/Cancel"
 	Blob_Withdraw_FullMethodName    = "/maelstrom.v1.Blob/Withdraw"
 	Blob_WithdrawAll_FullMethodName = "/maelstrom.v1.Blob/WithdrawAll"
 )
@@ -35,6 +36,7 @@ type BlobClient interface {
 	Submit(ctx context.Context, in *SubmitRequest, opts ...grpc.CallOption) (*SubmitResponse, error)
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
+	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
 	Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error)
 	WithdrawAll(ctx context.Context, in *WithdrawAllRequest, opts ...grpc.CallOption) (*WithdrawAllResponse, error)
 }
@@ -83,6 +85,15 @@ func (c *blobClient) Balance(ctx context.Context, in *BalanceRequest, opts ...gr
 	return out, nil
 }
 
+func (c *blobClient) Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error) {
+	out := new(CancelResponse)
+	err := c.cc.Invoke(ctx, Blob_Cancel_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *blobClient) Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error) {
 	out := new(WithdrawResponse)
 	err := c.cc.Invoke(ctx, Blob_Withdraw_FullMethodName, in, out, opts...)
@@ -109,6 +120,7 @@ type BlobServer interface {
 	Submit(context.Context, *SubmitRequest) (*SubmitResponse, error)
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	Balance(context.Context, *BalanceRequest) (*BalanceResponse, error)
+	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
 	Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error)
 	WithdrawAll(context.Context, *WithdrawAllRequest) (*WithdrawAllResponse, error)
 	mustEmbedUnimplementedBlobServer()
@@ -129,6 +141,9 @@ func (UnimplementedBlobServer) Status(context.Context, *StatusRequest) (*StatusR
 }
 func (UnimplementedBlobServer) Balance(context.Context, *BalanceRequest) (*BalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Balance not implemented")
+}
+func (UnimplementedBlobServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Cancel not implemented")
 }
 func (UnimplementedBlobServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Withdraw not implemented")
@@ -221,6 +236,24 @@ func _Blob_Balance_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Blob_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlobServer).Cancel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Blob_Cancel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlobServer).Cancel(ctx, req.(*CancelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Blob_Withdraw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WithdrawRequest)
 	if err := dec(in); err != nil {
@@ -279,6 +312,10 @@ var Blob_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Balance",
 			Handler:    _Blob_Balance_Handler,
+		},
+		{
+			MethodName: "Cancel",
+			Handler:    _Blob_Cancel_Handler,
 		},
 		{
 			MethodName: "Withdraw",

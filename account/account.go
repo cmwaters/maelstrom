@@ -2,6 +2,7 @@ package account
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
@@ -59,8 +60,21 @@ func (a *Account) Bytes() ([]byte, error) {
 			Balance: a.Balance,
 		})
 	}
+	var pkType maelstrom.Account_PubKeyType
+	switch a.PubKey.(type) {
+	case *secp256k1.PubKey:
+		pkType = maelstrom.Account_SECP256K1
+	case *secp256r1.PubKey:
+		pkType = maelstrom.Account_SECP256R1
+	case *ed25519.PubKey:
+		pkType = maelstrom.Account_ED25519
+	default:
+		return nil, fmt.Errorf("unsupported public key type: %s", a.PubKey.Type())
+	}
+
 	return proto.Marshal(&maelstrom.Account{
-		PubKey:  a.PubKey.Bytes(),
-		Balance: a.Balance,
+		PubKey:     a.PubKey.Bytes(),
+		Balance:    a.Balance,
+		PubKeyType: pkType,
 	})
 }

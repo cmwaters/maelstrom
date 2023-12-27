@@ -141,23 +141,11 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 		return nil, fmt.Errorf("minimum fee of %dutia required for this transaction", requiredPrice)
 	}
 
-	acc, err := s.store.GetAccount(req.Signer)
+	acc, err := s.getAccount(ctx, req.Signer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting account: %w", err)
 	}
 
-	// If the public key is not present, we need to retrieve it from the chain
-	// and update the account store.
-	if acc.PubKey == nil {
-		pk, err := s.accountRetriever.GetPubKey(ctx, req.Signer)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get pubkey for signer %s: %w", req.Signer, err)
-		}
-		acc := account.NewAccount(pk, acc.Balance)
-		if err := s.store.SetAccount(req.Signer, acc); err != nil {
-			return nil, fmt.Errorf("failed to set account for signer %s: %w", req.Signer, err)
-		}
-	}
 	msg := SubmitRequestSignOverData(req.Namespace, req.Blobs)
 	if !acc.PubKey.VerifySignature(msg, req.Signature) {
 		return nil, fmt.Errorf("invalid signature for signer %s", req.Signer)
@@ -169,7 +157,7 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 
 	key, err := s.pool.Add(req.Signer, req.Namespace[1:], req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("adding to pool: %w", err)
 	}
 
 	return &maelstrom.SubmitResponse{Id: uint64(key)}, nil
@@ -190,6 +178,26 @@ func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*m
 	}, nil
 }
 
+func (s *Server) Cancel(ctx context.Context, req *maelstrom.CancelRequest) (*maelstrom.CancelResponse, error) {
+	tx := s.pool.GetPendingTx(tx.ID(req.Id))
+	if tx == nil {
+		return nil, fmt.Errorf("transaction %d not found", req.Id)
+	}
+	acc, err := s.getAccount(ctx, tx.Signer())
+	if err != nil {
+		return nil, err
+	}
+	msg := CancelRequestSignOverData(tx.Signer(), req.Id)
+	if !acc.PubKey.VerifySignature(msg, req.Signature) {
+		return nil, fmt.Errorf("invalid signature for signer %s", tx.Signer())
+	}
+
+	if err := s.pool.Cancel(tx.ID()); err != nil {
+		return nil, err
+	}
+	return &maelstrom.CancelResponse{}, nil
+}
+
 func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (*maelstrom.WithdrawResponse, error) {
 	// TODO: Implement
 	return &maelstrom.WithdrawResponse{}, nil
@@ -198,6 +206,27 @@ func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (
 func (s *Server) WithdrawAll(ctx context.Context, req *maelstrom.WithdrawAllRequest) (*maelstrom.WithdrawAllResponse, error) {
 	// TODO: Implement
 	return &maelstrom.WithdrawAllResponse{}, nil
+}
+
+func (s *Server) getAccount(ctx context.Context, address string) (*account.Account, error) {
+	acc, err := s.store.GetAccount(address)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the public key is not present, we need to retrieve it from the chain
+	// and update the account store.
+	if acc.PubKey == nil {
+		pk, err := s.accountRetriever.GetPubKey(ctx, address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pubkey for signer %s: %w", address, err)
+		}
+		acc.PubKey = pk
+		if err := s.store.SetAccount(address, acc); err != nil {
+			return nil, fmt.Errorf("failed to set account for signer %s: %w", address, err)
+		}
+	}
+	return acc, nil
 }
 
 func totalBlobSize(blobs [][]byte) []uint32 {
