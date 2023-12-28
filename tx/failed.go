@@ -8,58 +8,57 @@ import (
 	"github.com/dgraph-io/badger"
 )
 
-func (p *Pool) MarkFailed(batchID BatchID, height Height) error {
+func (p *Pool) MarkFailed(txID TxID, height uint64) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	ids, ok := p.batchMap[batchID]
+	blobTx, ok := p.broadcastMap[txID]
 	if !ok {
-		return fmt.Errorf("batch %s not found", batchID)
+		return fmt.Errorf("blobTx %s not found", txID)
 	}
 
-	txs := p.getTxs(ids)
-	if err := p.store.MarkFailed(batchID, txs, height); err != nil {
+	blobs := p.getBlobs(ToBlobIDs(blobTx.TxIds))
+	if err := p.store.MarkFailed(txID, blobs, height); err != nil {
 		return err
 	}
 
-	for _, tx := range txs {
-		delete(p.txs, tx.id)
-		delete(p.txByHash, string(tx.hash))
-		delete(p.reverseBatchMap, tx.id)
-		p.expiredTxMap[tx.id] = height
+	for _, blob := range blobs {
+		delete(p.blobs, blob.id)
+		delete(p.blobByHash, string(blob.hash))
+		delete(p.reverseBlobTxMap, blob.id)
+		p.expiredBlobMap[blob.id] = height
 	}
 
-	delete(p.batchMap, batchID)
-	delete(p.broadcastMap, batchID)
+	delete(p.broadcastMap, txID)
 	return nil
 }
 
-func (s *Store) MarkFailed(batchID BatchID, txs []*Tx, height Height) error {
+func (s *Store) MarkFailed(txID TxID, blobs []*Blob, height uint64) error {
 	return s.db.Update(func(txn *badger.Txn) error {
-		for _, tx := range txs {
-			if err := markExpired(txn, tx.id, height); err != nil {
+		for _, blob := range blobs {
+			if err := markExpired(txn, blob.id, height); err != nil {
 				return err
 			}
 
 			// refund the fee back to the user
-			if _, err := account.UpdateBalance(txn, tx.signer, tx.fee, true); err != nil {
+			if err := account.UpdateBalance(txn, blob.signer, blob.fee, true); err != nil {
 				return err
 			}
 		}
 
-		return deleteBatch(txn, batchID)
+		return txn.Delete(BroadcastedBlobTxKey(txID))
 	})
 }
 
-func (s *Store) MarkExpired(txs []*Tx, height Height) error {
+func (s *Store) MarkExpired(blobs []*Blob, height uint64) error {
 	return s.db.Update(func(txn *badger.Txn) error {
-		for _, tx := range txs {
-			if err := markExpired(txn, tx.id, height); err != nil {
+		for _, blob := range blobs {
+			if err := markExpired(txn, blob.id, height); err != nil {
 				return err
 			}
 
 			// refund the fee back to the user
-			if _, err := account.UpdateBalance(txn, tx.signer, tx.fee, true); err != nil {
+			if err := account.UpdateBalance(txn, blob.signer, blob.fee, true); err != nil {
 				return err
 			}
 		}
@@ -67,23 +66,23 @@ func (s *Store) MarkExpired(txs []*Tx, height Height) error {
 	})
 }
 
-func markExpired(txn *badger.Txn, key ID, height Height) error {
+func markExpired(txn *badger.Txn, blobID BlobID, height uint64) error {
 	heightBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightBytes, uint64(height))
 
-	if err := txn.Set(ExpiredTxKey(key), heightBytes); err != nil {
+	if err := txn.Set(ExpiredBlobKey(blobID), heightBytes); err != nil {
 		return err
 	}
-	if err := txn.Delete(PendingTxKey(key)); err != nil {
+	if err := txn.Delete(PendingBlobKey(blobID)); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *Store) GetExpired(id ID) (uint64, error) {
+func (s *Store) GetExpired(id BlobID) (uint64, error) {
 	var height uint64
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(ExpiredTxKey(id))
+		item, err := txn.Get(ExpiredBlobKey(id))
 		if err != nil {
 			return err
 		}
@@ -95,10 +94,10 @@ func (s *Store) GetExpired(id ID) (uint64, error) {
 	return height, err
 }
 
-func (s *Store) DeleteExpiredTxs(ids []ID) error {
+func (s *Store) DeleteExpiredTxs(ids []BlobID) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		for _, id := range ids {
-			if err := txn.Delete(ExpiredTxKey(id)); err != nil {
+			if err := txn.Delete(ExpiredBlobKey(id)); err != nil {
 				return err
 			}
 		}
@@ -106,17 +105,17 @@ func (s *Store) DeleteExpiredTxs(ids []ID) error {
 	})
 }
 
-func (s *Store) LoadRecentlyExpiredTxs(limit ID) (map[ID]Height, error) {
-	expiredTxMap := make(map[ID]Height)
+func (s *Store) LoadRecentlyExpiredTxs(limit BlobID) (map[BlobID]uint64, error) {
+	expiredTxMap := make(map[BlobID]uint64)
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Reverse = true
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
-		for it.Seek(ExpiredTxKey(limit)); it.ValidForPrefix([]byte{ExpiredTxPrefix}); it.Next() {
+		for it.Seek(ExpiredBlobKey(limit)); it.ValidForPrefix([]byte{ExpiredTxPrefix}); it.Next() {
 			item := it.Item()
-			txID := TxIDFromBytes(item.Key())
+			blobID := BlobIDFromKey(item.Key())
 			var height uint64
 			err := item.Value(func(val []byte) error {
 				height = binary.BigEndian.Uint64(val)
@@ -126,7 +125,7 @@ func (s *Store) LoadRecentlyExpiredTxs(limit ID) (map[ID]Height, error) {
 				return err
 			}
 
-			expiredTxMap[txID] = Height(height)
+			expiredTxMap[blobID] = height
 		}
 		return nil
 	})

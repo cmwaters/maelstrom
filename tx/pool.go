@@ -11,37 +11,36 @@ import (
 
 var ErrTxNotFound = errors.New("transaction not found")
 
-type Height uint64
-
-func (h Height) Bytes() []byte {
+func HeightToBytes(h uint64) []byte {
 	heightBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(heightBytes, uint64(h))
 	return heightBytes
 }
 
-func HeightFromBytes(heightBytes []byte) Height {
-	return Height(binary.BigEndian.Uint64(heightBytes))
+func HeightFromBytes(heightBytes []byte) uint64 {
+	return binary.BigEndian.Uint64(heightBytes)
 }
 
 const defaultCacheSize = 1000
 
 type Pool struct {
 	mtx          sync.Mutex
-	latestHeight Height
-	cacheID      ID
+	latestHeight uint64
+	cacheID      BlobID
 	totalGas     uint64
 	totalFee     uint64
-	txs          map[ID]*Tx
-	pendingQueue []*Tx
+	blobs        map[BlobID]*Blob
+	pendingQueue []*Blob
 	// this is used for replay protection, preventing a user from submitting
 	// the exact same payload multiple times
-	txByHash        map[string]ID
-	batchMap        map[BatchID][]ID
-	reverseBatchMap map[ID]BatchID
-	nonceMap        map[uint64]BatchID
-	broadcastMap    map[BatchID]Height
-	expiredTxMap    map[ID]Height
-	committedTxMap  map[ID][]byte
+	blobByHash           map[string]BlobID
+	reverseBlobTxMap     map[BlobID]TxID
+	nonceMap             map[uint64]TxID
+	broadcastMap         map[TxID]*wire.BlobTx
+	expiredBlobMap       map[BlobID]uint64
+	committedBlobMap     map[BlobID]TxID
+	pendingWithdrawals   map[string]uint64
+	broadcastWithdrawals map[TxID]*wire.WithdrawalTx
 
 	// persist the things that matter, the rest stays in memory
 	store *Store
@@ -53,17 +52,18 @@ func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 		return nil, err
 	}
 	pool := &Pool{
-		txs:             make(map[ID]*Tx),
-		txByHash:        make(map[string]ID),
-		batchMap:        make(map[BatchID][]ID),
-		reverseBatchMap: make(map[ID]BatchID),
-		nonceMap:        make(map[uint64]BatchID),
-		broadcastMap:    make(map[BatchID]Height),
-		expiredTxMap:    make(map[ID]Height),
-		committedTxMap:  make(map[ID][]byte),
-		pendingQueue:    make([]*Tx, 0),
-		store:           store,
-		latestHeight:    Height(latestHeight),
+		blobs:                make(map[BlobID]*Blob),
+		blobByHash:           make(map[string]BlobID),
+		reverseBlobTxMap:     make(map[BlobID]TxID),
+		nonceMap:             make(map[uint64]TxID),
+		broadcastMap:         make(map[TxID]*wire.BlobTx),
+		expiredBlobMap:       make(map[BlobID]uint64),
+		committedBlobMap:     make(map[BlobID]TxID),
+		pendingQueue:         make([]*Blob, 0),
+		pendingWithdrawals:   make(map[string]uint64),
+		broadcastWithdrawals: make(map[TxID]*wire.WithdrawalTx),
+		store:                store,
+		latestHeight:         latestHeight,
 	}
 	if err := pool.load(pool.latestHeight, defaultCacheSize); err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func NewPool(db *badger.DB, latestHeight uint64) (*Pool, error) {
 	return pool, nil
 }
 
-func (p *Pool) Status(id ID) *wire.StatusResponse {
+func (p *Pool) Status(id BlobID) *wire.StatusResponse {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -80,43 +80,44 @@ func (p *Pool) Status(id ID) *wire.StatusResponse {
 	}
 	switch resp.Status {
 	case wire.StatusResponse_PENDING:
-		tx := p.txs[id]
-		resp.InsertHeight = uint64(tx.insertHeight)
-		resp.ExpiryHeight = uint64(tx.insertHeight) + tx.timeoutBlocks
+		blob := p.blobs[id]
+		resp.InsertHeight = blob.InsertHeight()
+		resp.ExpiryHeight = blob.InsertHeight() + blob.TimeoutBlocks()
 	case wire.StatusResponse_BROADCASTING:
-		tx := p.txs[id]
-		resp.InsertHeight = uint64(tx.insertHeight)
-		resp.ExpiryHeight = uint64(p.broadcastMap[p.reverseBatchMap[id]])
+		blob := p.blobs[id]
+		resp.InsertHeight = blob.InsertHeight()
+		blobTx := p.broadcastMap[p.reverseBlobTxMap[id]]
+		resp.ExpiryHeight = blobTx.TimeoutHeight
 	case wire.StatusResponse_EXPIRED:
-		resp.ExpiryHeight = uint64(p.expiredTxMap[id])
+		resp.ExpiryHeight = uint64(p.expiredBlobMap[id])
 	case wire.StatusResponse_COMMITTED:
-		resp.TxHash = p.committedTxMap[id]
+		resp.TxHash = p.committedBlobMap[id].Bytes()
 	}
 	return resp
 }
 
-func (p *Pool) getStatus(id ID) wire.StatusResponse_Status {
-	_, isPending := p.txs[id]
+func (p *Pool) getStatus(id BlobID) wire.StatusResponse_Status {
+	_, isPending := p.blobs[id]
 	if isPending {
-		BatchID, isBatched := p.reverseBatchMap[id]
+		BatchID, isBatched := p.reverseBlobTxMap[id]
 		_, isBroadcast := p.broadcastMap[BatchID]
 		if isBatched && isBroadcast {
 			return wire.StatusResponse_BROADCASTING
 		}
 		return wire.StatusResponse_PENDING
 	}
-	_, isExpired := p.expiredTxMap[id]
+	_, isExpired := p.expiredBlobMap[id]
 	if isExpired {
 		return wire.StatusResponse_EXPIRED
 	}
-	_, isCommitted := p.committedTxMap[id]
+	_, isCommitted := p.committedBlobMap[id]
 	if isCommitted {
 		return wire.StatusResponse_COMMITTED
 	}
 	return wire.StatusResponse_UNKNOWN
 }
 
-func (p *Pool) Update(height Height) (int, error) {
+func (p *Pool) Update(height uint64) (int, error) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -134,23 +135,23 @@ func (p *Pool) Update(height Height) (int, error) {
 	return expiredTxs + timedOutTxs, nil
 }
 
-func (p *Pool) getTxs(ids []ID) []*Tx {
-	txs := make([]*Tx, len(ids))
+func (p *Pool) getBlobs(ids []BlobID) []*Blob {
+	blobs := make([]*Blob, len(ids))
 	for i, id := range ids {
-		txs[i] = p.txs[id]
+		blobs[i] = p.blobs[id]
 	}
-	return txs
+	return blobs
 }
 
-func (p *Pool) load(height Height, cacheSize int) error {
-	lastKey, err := p.store.GetLastTxKey()
+func (p *Pool) load(height uint64, cacheSize int) error {
+	lastKey, err := p.store.GetLastBlobKey()
 	if err != nil {
 		return err
 	}
 
-	limitID := ID(0)
+	limitID := BlobID(0)
 	if uint64(lastKey) > uint64(cacheSize) {
-		limitID = lastKey - ID(cacheSize)
+		limitID = lastKey - BlobID(cacheSize)
 	}
 	p.cacheID = limitID
 
@@ -159,7 +160,7 @@ func (p *Pool) load(height Height, cacheSize int) error {
 		return err
 	}
 	for id, tx := range commitedTxs {
-		p.committedTxMap[id] = tx.TxHash
+		p.committedBlobMap[id] = TxID(tx.TxHash)
 	}
 
 	expiredTxs, err := p.store.LoadRecentlyExpiredTxs(limitID)
@@ -167,7 +168,7 @@ func (p *Pool) load(height Height, cacheSize int) error {
 		return err
 	}
 	for id, height := range expiredTxs {
-		p.expiredTxMap[id] = height
+		p.expiredBlobMap[id] = height
 	}
 
 	expiredTxs, err = p.store.RefundLostPendingTxs(height)
@@ -175,14 +176,9 @@ func (p *Pool) load(height Height, cacheSize int) error {
 		return err
 	}
 	for id, height := range expiredTxs {
-		p.expiredTxMap[id] = height
+		p.expiredBlobMap[id] = height
 	}
 
-	p.batchMap, err = p.store.LoadAllBatchedTxs()
-	if err != nil {
-		return err
-	}
-
-	p.broadcastMap, err = p.store.LoadAllBroadcastedBatches()
+	p.broadcastMap, err = p.store.LoadAllBroadcastedBlobTxs()
 	return err
 }

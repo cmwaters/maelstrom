@@ -164,7 +164,7 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 }
 
 func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*maelstrom.StatusResponse, error) {
-	status := s.pool.Status(tx.ID(req.Id))
+	status := s.pool.Status(tx.BlobID(req.Id))
 	return status, nil
 }
 
@@ -179,7 +179,7 @@ func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*m
 }
 
 func (s *Server) Cancel(ctx context.Context, req *maelstrom.CancelRequest) (*maelstrom.CancelResponse, error) {
-	tx := s.pool.GetPendingTx(tx.ID(req.Id))
+	tx := s.pool.GetPendingTx(tx.BlobID(req.Id))
 	if tx == nil {
 		return nil, fmt.Errorf("transaction %d not found", req.Id)
 	}
@@ -199,13 +199,35 @@ func (s *Server) Cancel(ctx context.Context, req *maelstrom.CancelRequest) (*mae
 }
 
 func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (*maelstrom.WithdrawResponse, error) {
-	// TODO: Implement
-	return &maelstrom.WithdrawResponse{}, nil
-}
+	now := uint64(time.Now().UTC().Unix())
+	var tolerance = uint64(10) // 10 seconds
+	if req.Timestamp < now-tolerance || req.Timestamp > now+tolerance {
+		return nil, fmt.Errorf("invalid timestamp %d, must be within %d seconds of current time", req.Timestamp, tolerance)
+	}
 
-func (s *Server) WithdrawAll(ctx context.Context, req *maelstrom.WithdrawAllRequest) (*maelstrom.WithdrawAllResponse, error) {
-	// TODO: Implement
-	return &maelstrom.WithdrawAllResponse{}, nil
+	if req.Balance <= req.Amount {
+		return nil, fmt.Errorf("invalid amount %d, must be less than balance %d", req.Amount, req.Balance)
+	}
+
+	acc, err := s.getAccount(ctx, req.Signer)
+	if err != nil {
+		return nil, fmt.Errorf("getting account: %w", err)
+	}
+
+	if acc.Balance != req.Balance {
+		return nil, fmt.Errorf("invalid balance %d, must match account balance %d", req.Balance, acc.Balance)
+	}
+
+	msg := WithdrawRequestSignOverData(req.Signer, req.Balance, req.Amount, req.Timestamp)
+	if !acc.PubKey.VerifySignature(msg, req.Signature) {
+		return nil, fmt.Errorf("invalid signature for signer %s", req.Signer)
+	}
+
+	if err := s.pool.ProcessWithdrawal(req.Signer, req.Amount); err != nil {
+		return nil, err
+	}
+
+	return &maelstrom.WithdrawResponse{}, nil
 }
 
 func (s *Server) getAccount(ctx context.Context, address string) (*account.Account, error) {

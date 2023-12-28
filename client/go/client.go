@@ -94,7 +94,6 @@ func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println(resp.Status)
 			switch resp.Status {
 			case maelstrom.StatusResponse_COMMITTED:
 				return resp.TxHash, nil

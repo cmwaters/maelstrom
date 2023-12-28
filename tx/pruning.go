@@ -4,7 +4,7 @@ package tx
 const deepPruneFrequency = 1_000
 const expiredTxPrunePeriod = 10_000 // roughly every 2 days given 15 second block time
 
-func (p *Pool) prune(height Height) (int, error) {
+func (p *Pool) prune(height uint64) (int, error) {
 	prunedTxs, err := p.prunePending(height)
 	if err != nil {
 		return 0, err
@@ -18,44 +18,44 @@ func (p *Pool) prune(height Height) (int, error) {
 	return prunedTxs, nil
 }
 
-func (p *Pool) prunePending(height Height) (int, error) {
-	txsToExpire := make([]*Tx, 0)
-	for id, tx := range p.txs {
-		if tx.insertHeight+Height(tx.timeoutBlocks) < height {
+func (p *Pool) prunePending(height uint64) (int, error) {
+	blobsToExpire := make([]*Blob, 0)
+	for id, blob := range p.blobs {
+		if blob.ExpiryHeight() < height {
 			// if it is part of a batch that has been broadcasted
 			// we ignore it. The broadcast timeout should manage this tx
-			if batchID, ok := p.reverseBatchMap[id]; ok {
+			if batchID, ok := p.reverseBlobTxMap[id]; ok {
 				if _, ok := p.broadcastMap[batchID]; ok {
 					continue
 				}
 			}
 
-			txsToExpire = append(txsToExpire, tx)
+			blobsToExpire = append(blobsToExpire, blob)
 		}
 	}
-	if err := p.store.MarkExpired(txsToExpire, height); err != nil {
+	if err := p.store.MarkExpired(blobsToExpire, height); err != nil {
 		return 0, err
 	}
-	for _, tx := range txsToExpire {
-		delete(p.txs, tx.id)
-		delete(p.txByHash, string(tx.hash))
-		p.expiredTxMap[tx.id] = height
+	for _, blob := range blobsToExpire {
+		delete(p.blobs, blob.ID())
+		delete(p.blobByHash, string(blob.Hash()))
+		p.expiredBlobMap[blob.ID()] = height
 	}
-	return len(txsToExpire), nil
+	return len(blobsToExpire), nil
 }
 
-func (p *Pool) pruneExpired(height Height) error {
-	expiredTxIds := make([]ID, 0)
-	for txKey, expiredHeight := range p.expiredTxMap {
+func (p *Pool) pruneExpired(height uint64) error {
+	expiredBlobIds := make([]BlobID, 0)
+	for blobID, expiredHeight := range p.expiredBlobMap {
 		if expiredHeight+expiredTxPrunePeriod < height {
-			expiredTxIds = append(expiredTxIds, txKey)
+			expiredBlobIds = append(expiredBlobIds, blobID)
 		}
 	}
-	if err := p.store.DeleteExpiredTxs(expiredTxIds); err != nil {
+	if err := p.store.DeleteExpiredTxs(expiredBlobIds); err != nil {
 		return err
 	}
-	for _, txKey := range expiredTxIds {
-		delete(p.expiredTxMap, txKey)
+	for _, blobID := range expiredBlobIds {
+		delete(p.expiredBlobMap, blobID)
 	}
 	return nil
 }

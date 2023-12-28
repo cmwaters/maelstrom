@@ -64,8 +64,9 @@ func Sync(
 	fromHeight, toHeight uint64,
 ) error {
 	decoder := encoding.MakeConfig(app.ModuleEncodingRegisters...).TxConfig.TxDecoder()
-	for height := int64(fromHeight); height <= int64(toHeight); height++ {
-		block, err := client.Block(ctx, &height)
+	for height := fromHeight; height <= toHeight; height++ {
+		h := int64(height)
+		block, err := client.Block(ctx, &h)
 		if err != nil {
 			return err
 		}
@@ -74,7 +75,7 @@ func Sync(
 		defer txn.Discard()
 
 		// update the height
-		if err := store.SetHeight(txn, uint64(height)); err != nil {
+		if err := store.SetHeight(txn, height); err != nil {
 			return err
 		}
 
@@ -83,7 +84,7 @@ func Sync(
 		sendTxs := filterSendTxs(blockTxs, decoder, signer)
 		if len(sendTxs) != 0 {
 			// get the results from all transactions in that block
-			blockResults, err := client.BlockResults(ctx, &height)
+			blockResults, err := client.BlockResults(ctx, &h)
 			if err != nil {
 				return err
 			}
@@ -106,15 +107,15 @@ func Sync(
 		// transactions have been included in the block. Then mark them as committed
 		committedCounter := 0
 		for _, blockTx := range blockTxs {
-			batchID := tx.GetBatchID(blockTx)
-			if pool.WasBroadcasted(batchID) {
+			txID := tx.GetTxID(blockTx)
+			if pool.WasBroadcasted(txID) {
 				blobTx, isBlobTx := types.UnmarshalBlobTx(blockTx)
 				if !isBlobTx {
 					panic("maelstrom registers a broadcasted tx that is not a blob tx")
 				}
 				pfbHash := tx.Hash(blobTx.Tx)
 
-				if err := pool.CommitBatch(txn, batchID, pfbHash, tx.Height(height)); err != nil {
+				if err := pool.CommitTx(txn, txID, pfbHash); err != nil {
 					return err
 				}
 				committedCounter++
@@ -129,13 +130,13 @@ func Sync(
 		// update the pools height. This will trigger pruning of transactions
 		// that have expired and return funds to the senders. It does not have
 		// to be atomic with the transaction processing committed block transactions.
-		failedTxs, err := pool.Update(tx.Height(height))
+		failedTxs, err := pool.Update(height)
 		if err != nil {
 			return err
 		}
 
 		log.Info().
-			Int64("height", height).
+			Uint64("height", height).
 			Int("confirmed_txs", committedCounter).
 			Int("failed_txs", failedTxs).
 			Int("deposits", len(sendTxs)).

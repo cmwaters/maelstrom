@@ -21,3 +21,11 @@ func CancelRequestSignOverData(signer string, txID uint64) []byte {
 	_, _ = buf.Write(binary.BigEndian.AppendUint64(nil, txID))
 	return buf.Bytes()
 }
+
+func WithdrawRequestSignOverData(signer string, balance, amount, timestamp uint64) []byte {
+	buf := bytes.NewBufferString(signer)
+	_, _ = buf.Write(binary.BigEndian.AppendUint64(nil, balance))
+	_, _ = buf.Write(binary.BigEndian.AppendUint64(nil, amount))
+	_, _ = buf.Write(binary.BigEndian.AppendUint64(nil, timestamp))
+	return buf.Bytes()
+}

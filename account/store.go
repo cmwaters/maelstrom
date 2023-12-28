@@ -144,23 +144,24 @@ func (s *Store) SetAccount(address string, account *Account) error {
 
 func (s *Store) ProcessDeposits(txn *badger.Txn, deposits map[string]uint64) error {
 	for address, amount := range deposits {
-		_, err := UpdateBalance(txn, address, amount, true)
-		if err != nil {
+		if err := UpdateBalance(txn, address, amount, true); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func (s *Store) UpdateBalance(address string, amount uint64, add bool) error {
+	return s.db.Update(UpdateBalanceFn(address, amount, add))
+}
+
 func UpdateBalanceFn(address string, amount uint64, add bool) func(*badger.Txn) error {
 	return func(txn *badger.Txn) error {
-		_, err := UpdateBalance(txn, address, amount, add)
-		return err
+		return UpdateBalance(txn, address, amount, add)
 	}
 }
 
-func UpdateBalance(txn *badger.Txn, address string, amount uint64, add bool) (bool, error) {
-	successful := false
+func UpdateBalance(txn *badger.Txn, address string, amount uint64, add bool) error {
 	item, err := txn.Get(AccountKey(address))
 	if err != nil {
 		if errors.Is(err, badger.ErrKeyNotFound) {
@@ -168,17 +169,17 @@ func UpdateBalance(txn *badger.Txn, address string, amount uint64, add bool) (bo
 				newAccount := &Account{Balance: amount}
 				accountBytes, err := newAccount.Bytes()
 				if err != nil {
-					return false, err
+					return err
 				}
 				if err := txn.Set(AccountKey(address), accountBytes); err != nil {
-					return false, err
+					return err
 				}
-				return true, nil
+				return nil
 			} else {
 				panic(fmt.Sprintf("account %s does not exist. Tried deducting %d", address, amount))
 			}
 		}
-		return false, err
+		return err
 	}
 	err = item.Value(func(val []byte) error {
 		var err error
@@ -186,23 +187,23 @@ func UpdateBalance(txn *badger.Txn, address string, amount uint64, add bool) (bo
 		if err != nil {
 			return err
 		}
-		if add || account.Balance >= amount {
-			if add {
-				account.Balance += amount
-			} else {
-				account.Balance -= amount
-			}
-			successful = true
-			bz, err := account.Bytes()
-			if err != nil {
-				return err
-			}
-			return txn.Set(AccountKey(address), bz)
+		if !add && amount > account.Balance {
+			return fmt.Errorf("account %s does not have enough balance to deduct %d", address, amount)
 		}
-		return nil
+
+		if add {
+			account.Balance += amount
+		} else {
+			account.Balance -= amount
+		}
+		bz, err := account.Bytes()
+		if err != nil {
+			return err
+		}
+		return txn.Set(AccountKey(address), bz)
 	})
 	if err != nil {
-		return false, err
+		return err
 	}
-	return successful, nil
+	return nil
 }

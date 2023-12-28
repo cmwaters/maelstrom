@@ -21,11 +21,11 @@ func (p *Pool) Add(
 	fee, estimatedGas uint64,
 	options *wire.Options,
 	hook func(*badger.Txn) error,
-) (ID, error) {
+) (BlobID, error) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	tx := &Tx{
+	blob := &Blob{
 		signer:        signer,
 		namespace:     namespace,
 		blobs:         blobs,
@@ -36,49 +36,49 @@ func (p *Pool) Add(
 	}
 	if options != nil {
 		if options.TimeoutBlocks > 0 && options.TimeoutBlocks <= maxTimeout {
-			tx.timeoutBlocks = options.TimeoutBlocks
+			blob.timeoutBlocks = options.TimeoutBlocks
 		}
 	}
-	hash := tx.Hash()
-	if _, ok := p.txByHash[string(hash[:])]; ok {
+	hash := blob.Hash()
+	if _, ok := p.blobByHash[string(hash[:])]; ok {
 		return 0, fmt.Errorf("duplicate transaction")
 	}
 
-	pendingTx := tx.ToPendingTx()
-	id, err := p.store.SetPendingTx(pendingTx, hook)
+	blobMeta := blob.BlobMeta()
+	id, err := p.store.SetPendingBlob(blobMeta, hook)
 	if err != nil {
 		return 0, err
 	}
-	tx.id = id
-	p.txByHash[string(hash)] = id
-	p.txs[id] = tx
-	p.pendingQueue = append(p.pendingQueue, tx)
+	blob.id = id
+	p.blobByHash[string(hash)] = id
+	p.blobs[id] = blob
+	p.pendingQueue = append(p.pendingQueue, blob)
 	p.totalGas += estimatedGas
 	p.totalFee += fee
 
 	return id, nil
 }
 
-func (p *Pool) Cancel(id ID) error {
+func (p *Pool) Cancel(id BlobID) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	tx, ok := p.txs[id]
+	tx, ok := p.blobs[id]
 	if !ok {
 		return fmt.Errorf("tx not found")
 	}
-	if _, ok := p.reverseBatchMap[id]; ok {
+	if _, ok := p.reverseBlobTxMap[id]; ok {
 		return fmt.Errorf("tx has already been broadcasted")
 	}
 	refund := func(txn *badger.Txn) error {
 		// refund the fee back to the user
-		_, err := account.UpdateBalance(txn, tx.signer, tx.fee, true)
+		err := account.UpdateBalance(txn, tx.signer, tx.fee, true)
 		return err
 	}
 
-	if err := p.store.DeletePendingTx(id, refund); err != nil {
+	if err := p.store.DeletePendingBlob(id, refund); err != nil {
 		return err
 	}
-	delete(p.txs, id)
+	delete(p.blobs, id)
 	// remove the tx from the queue
 	for i, queueTx := range p.pendingQueue {
 		if queueTx.id == id {
@@ -86,13 +86,13 @@ func (p *Pool) Cancel(id ID) error {
 			break
 		}
 	}
-	delete(p.txByHash, string(tx.Hash()))
+	delete(p.blobByHash, string(tx.Hash()))
 	p.totalGas -= tx.estimatedGas
 	p.totalFee -= tx.fee
 	return nil
 }
 
-func (p *Pool) Pull(gasPrice float64, fixedPFBGas uint64) []*Tx {
+func (p *Pool) Pull(gasPrice float64, fixedPFBGas uint64) []*Blob {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -102,54 +102,53 @@ func (p *Pool) Pull(gasPrice float64, fixedPFBGas uint64) []*Tx {
 	return nil
 }
 
-func (p *Pool) GetPendingTx(id ID) *Tx {
+func (p *Pool) GetPendingTx(id BlobID) *Blob {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	return p.txs[id]
+	return p.blobs[id]
 }
 
-func (s *Store) GetPendingTx(id ID) (*wire.Tx, error) {
-	var pendingTx *wire.Tx
+func (s *Store) GetBlobMeta(id BlobID) (*wire.BlobMeta, error) {
+	var blobMeta *wire.BlobMeta
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(PendingTxKey(id))
+		item, err := txn.Get(PendingBlobKey(id))
 		if err != nil {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			return proto.Unmarshal(val, pendingTx)
+			return proto.Unmarshal(val, blobMeta)
 		})
 	})
-	return pendingTx, err
+	return blobMeta, err
 }
 
-func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) error) (ID, error) {
-	var lastID ID
+func (s *Store) SetPendingBlob(blobMeta *wire.BlobMeta, hook func(txn *badger.Txn) error) (BlobID, error) {
+	var lastID BlobID
 	err := s.db.Update(func(txn *badger.Txn) error {
-		bz, err := proto.Marshal(pendingTx)
+		bz, err := proto.Marshal(blobMeta)
 		if err != nil {
 			return err
 		}
 
-		item, err := txn.Get(LastTxIDKey())
+		item, err := txn.Get(LastBlobIDKey())
 		if err != nil {
 			return fmt.Errorf("getting last tx id: %w", err)
 		}
 
 		err = item.Value(func(val []byte) error {
-			lastID = TxIDFromBytes(val)
-			fmt.Println("lastID", lastID)
+			lastID = BlobIDFromKey(val)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
 
-		if err := txn.Set(LastTxIDKey(), PendingTxKey(lastID+1)); err != nil {
+		if err := txn.Set(LastBlobIDKey(), PendingBlobKey(lastID+1)); err != nil {
 			return fmt.Errorf("incrementing last tx id: %w", err)
 		}
 
-		if err := txn.Set(PendingTxKey(lastID), bz); err != nil {
+		if err := txn.Set(PendingBlobKey(lastID), bz); err != nil {
 			return err
 		}
 
@@ -158,23 +157,22 @@ func (s *Store) SetPendingTx(pendingTx *wire.Tx, hook func(txn *badger.Txn) erro
 		}
 		return nil
 	})
-	fmt.Println("returning lastID", lastID)
 	return lastID, err
 }
 
-func (s *Store) DeletePendingTx(id ID, hook func(txn *badger.Txn) error) error {
+func (s *Store) DeletePendingBlob(id BlobID, hook func(txn *badger.Txn) error) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		if hook != nil {
 			if err := hook(txn); err != nil {
 				return err
 			}
 		}
-		return txn.Delete(PendingTxKey(id))
+		return txn.Delete(PendingBlobKey(id))
 	})
 }
 
-func (s *Store) RefundLostPendingTxs(height Height) (map[ID]Height, error) {
-	expiredTxMap := make(map[ID]Height)
+func (s *Store) RefundLostPendingTxs(height uint64) (map[BlobID]uint64, error) {
+	expiredTxMap := make(map[BlobID]uint64)
 	err := s.db.Update(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Reverse = true
@@ -183,24 +181,24 @@ func (s *Store) RefundLostPendingTxs(height Height) (map[ID]Height, error) {
 
 		for it.Seek([]byte{PendingTxPrefix}); it.ValidForPrefix([]byte{PendingTxPrefix}); it.Next() {
 			item := it.Item()
-			txID := TxIDFromBytes(item.Key())
-			if err := markExpired(txn, txID, height); err != nil {
+			blobID := BlobIDFromKey(item.Key())
+			if err := markExpired(txn, blobID, height); err != nil {
 				return err
 			}
-			var tx wire.Tx
+			var blobMeta wire.BlobMeta
 			err := item.Value(func(val []byte) error {
-				return proto.Unmarshal(val, &tx)
+				return proto.Unmarshal(val, &blobMeta)
 			})
 			if err != nil {
 				return err
 			}
 
 			// refund the fee back to the user
-			if _, err := account.UpdateBalance(txn, tx.Signer, tx.Fee, true); err != nil {
+			if err := account.UpdateBalance(txn, blobMeta.Signer, blobMeta.Fee, true); err != nil {
 				return err
 			}
 
-			expiredTxMap[txID] = height
+			expiredTxMap[blobID] = height
 		}
 		return nil
 	})

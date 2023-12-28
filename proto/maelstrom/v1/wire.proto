@@ -16,13 +16,23 @@ message Account {
     PubKeyType pub_key_type = 3;
 }
 
-message Batch {
-    repeated uint64 tx_ids = 1;
-}
-
-message Tx {
+message BlobMeta {
     string signer = 1;
     uint64 fee = 2;
     bytes tx_hash = 3;
-    uint64 height_committed = 4;
+}
+
+message BlobTx {
+    repeated uint64 tx_ids = 1;
+    uint64 timeout_height = 2;
+}
+
+message WithdrawalTx {
+    repeated Withdrawal withdrawals = 1;
+    uint64 timeout_height = 2;
+}
+
+message Withdrawal {
+    string address = 1;
+    uint64 amount = 2;
 }

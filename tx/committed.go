@@ -8,82 +8,81 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func (p *Pool) CommitBatch(txn *badger.Txn, batchID BatchID, pfbHash []byte, height Height) error {
+func (p *Pool) CommitTx(txn *badger.Txn, txID TxID, pfbHash []byte) error {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	ids, ok := p.batchMap[batchID]
+	blobTx, ok := p.broadcastMap[txID]
 	if !ok {
 		return errors.New("batch not found")
 	}
+	ids := ToBlobIDs(blobTx.TxIds)
 
 	if err := p.store.MarkCommitted(txn, ids, pfbHash); err != nil {
 		return err
 	}
-	for _, txID := range ids {
-		delete(p.txs, txID)
-		delete(p.reverseBatchMap, txID)
-		p.committedTxMap[txID] = pfbHash
+	for _, blobID := range ids {
+		delete(p.blobs, blobID)
+		delete(p.reverseBlobTxMap, blobID)
+		p.committedBlobMap[blobID] = TxID(pfbHash)
 	}
-	delete(p.batchMap, batchID)
-	p.broadcastMap[batchID] = height
+	delete(p.broadcastMap, txID)
 	return nil
 }
 
-func (s *Store) MarkCommitted(txn *badger.Txn, txIds []ID, txHash []byte) error {
-	for _, txID := range txIds {
-		item, err := txn.Get(PendingTxKey(txID))
+func (s *Store) MarkCommitted(txn *badger.Txn, blobIds []BlobID, txHash []byte) error {
+	for _, blobID := range blobIds {
+		item, err := txn.Get(PendingBlobKey(blobID))
 		if err != nil {
 			return err
 		}
 
-		var tx wire.Tx
+		var blob wire.BlobMeta
 		err = item.Value(func(val []byte) error {
-			return proto.Unmarshal(val, &tx)
+			return proto.Unmarshal(val, &blob)
 		})
 		if err != nil {
 			return err
 		}
-		newTx := &wire.Tx{
-			Signer: tx.Signer,
-			Fee:    tx.Fee,
+		newBlob := &wire.BlobMeta{
+			Signer: blob.Signer,
+			Fee:    blob.Fee,
 			TxHash: txHash,
 		}
-		txBytes, err := proto.Marshal(newTx)
+		txBytes, err := proto.Marshal(newBlob)
 		if err != nil {
 			return err
 		}
 
-		if err := txn.Set(CommittedTxKey(txID), txBytes); err != nil {
+		if err := txn.Set(CommittedBlobKey(blobID), txBytes); err != nil {
 			return err
 		}
-		if err := txn.Delete(PendingTxKey(txID)); err != nil {
+		if err := txn.Delete(PendingBlobKey(blobID)); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *Store) GetCommittedTx(id ID) (BatchID, error) {
-	var batchID BatchID
+func (s *Store) GetCommittedBlob(id BlobID) (*wire.BlobMeta, error) {
+	var blob wire.BlobMeta
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(CommittedTxKey(id))
+		item, err := txn.Get(CommittedBlobKey(id))
 		if err != nil {
 			return err
 		}
 
 		return item.Value(func(val []byte) error {
-			batchID = BatchID(val)
-			return nil
+			return proto.Unmarshal(val, &blob)
 		})
 	})
-	return batchID, err
+	return &blob, err
 }
 
-func (s *Store) DeleteCommittedTxs(ids []ID) error {
+func (s *Store) DeleteCommittedTxs(ids []BlobID) error {
 	return s.db.Update(func(txn *badger.Txn) error {
 		for _, id := range ids {
-			if err := txn.Delete(CommittedTxKey(id)); err != nil {
+			if err := txn.Delete(CommittedBlobKey(id)); err != nil {
 				return err
 			}
 		}
@@ -91,25 +90,25 @@ func (s *Store) DeleteCommittedTxs(ids []ID) error {
 	})
 }
 
-func (s *Store) GetMostRecentCommittedTxs(limit ID) (map[ID]*wire.Tx, error) {
-	var txs = make(map[ID]*wire.Tx)
+func (s *Store) GetMostRecentCommittedTxs(limit BlobID) (map[BlobID]*wire.BlobMeta, error) {
+	var txs = make(map[BlobID]*wire.BlobMeta)
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Reverse = true
 		it := txn.NewIterator(opts)
 		defer it.Close()
 
-		for it.Seek(CommittedTxKey(limit)); it.ValidForPrefix([]byte{CommittedTxPrefix}); it.Next() {
+		for it.Seek(CommittedBlobKey(limit)); it.ValidForPrefix([]byte{CommittedTxPrefix}); it.Next() {
 			item := it.Item()
-			var tx wire.Tx
+			var blob wire.BlobMeta
 			err := item.Value(func(val []byte) error {
-				return proto.Unmarshal(val, &tx)
+				return proto.Unmarshal(val, &blob)
 			})
 			if err != nil {
 				return err
 			}
-			txID := TxIDFromBytes(item.Key())
-			txs[txID] = &tx
+			txID := BlobIDFromKey(item.Key())
+			txs[txID] = &blob
 		}
 		return nil
 	})

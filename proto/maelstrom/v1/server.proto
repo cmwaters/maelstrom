@@ -25,9 +25,6 @@ service Blob {
     rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
         option (google.api.http) = { post: "/v1/withdraw", body: "*" };
     }
-    rpc WithdrawAll(WithdrawAllRequest) returns (WithdrawAllResponse) {
-        option (google.api.http) = { post: "/v1/withdrawAll", body: "*" };
-    }
 }
 
 message InfoRequest {}
@@ -97,15 +94,10 @@ message CancelResponse {}
 
 message WithdrawRequest {
     string signer = 1;
-    uint64 amount = 2;
-    bytes signature = 3;
+    uint64 balance = 2;
+    uint64 amount = 3;
+    uint64 timestamp = 4;
+    bytes signature = 5;
 }
 
 message WithdrawResponse {}
-
-message WithdrawAllRequest {
-    string signer = 1;
-    bytes signature = 2;
-}
-
-message WithdrawAllResponse {}

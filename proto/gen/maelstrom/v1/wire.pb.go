@@ -135,16 +135,18 @@ func (x *Account) GetPubKeyType() Account_PubKeyType {
 	return Account_UNKNOWN
 }
 
-type Batch struct {
+type BlobMeta struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	TxIds []uint64 `protobuf:"varint,1,rep,packed,name=tx_ids,json=txIds,proto3" json:"tx_ids,omitempty"`
+	Signer string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
+	Fee    uint64 `protobuf:"varint,2,opt,name=fee,proto3" json:"fee,omitempty"`
+	TxHash []byte `protobuf:"bytes,3,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
 }
 
-func (x *Batch) Reset() {
-	*x = Batch{}
+func (x *BlobMeta) Reset() {
+	*x = BlobMeta{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_maelstrom_v1_wire_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -152,13 +154,13 @@ func (x *Batch) Reset() {
 	}
 }
 
-func (x *Batch) String() string {
+func (x *BlobMeta) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Batch) ProtoMessage() {}
+func (*BlobMeta) ProtoMessage() {}
 
-func (x *Batch) ProtoReflect() protoreflect.Message {
+func (x *BlobMeta) ProtoReflect() protoreflect.Message {
 	mi := &file_maelstrom_v1_wire_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -170,31 +172,43 @@ func (x *Batch) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Batch.ProtoReflect.Descriptor instead.
-func (*Batch) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlobMeta.ProtoReflect.Descriptor instead.
+func (*BlobMeta) Descriptor() ([]byte, []int) {
 	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Batch) GetTxIds() []uint64 {
+func (x *BlobMeta) GetSigner() string {
 	if x != nil {
-		return x.TxIds
+		return x.Signer
+	}
+	return ""
+}
+
+func (x *BlobMeta) GetFee() uint64 {
+	if x != nil {
+		return x.Fee
+	}
+	return 0
+}
+
+func (x *BlobMeta) GetTxHash() []byte {
+	if x != nil {
+		return x.TxHash
 	}
 	return nil
 }
 
-type Tx struct {
+type BlobTx struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Signer          string `protobuf:"bytes,1,opt,name=signer,proto3" json:"signer,omitempty"`
-	Fee             uint64 `protobuf:"varint,2,opt,name=fee,proto3" json:"fee,omitempty"`
-	TxHash          []byte `protobuf:"bytes,3,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	HeightCommitted uint64 `protobuf:"varint,4,opt,name=height_committed,json=heightCommitted,proto3" json:"height_committed,omitempty"`
+	TxIds         []uint64 `protobuf:"varint,1,rep,packed,name=tx_ids,json=txIds,proto3" json:"tx_ids,omitempty"`
+	TimeoutHeight uint64   `protobuf:"varint,2,opt,name=timeout_height,json=timeoutHeight,proto3" json:"timeout_height,omitempty"`
 }
 
-func (x *Tx) Reset() {
-	*x = Tx{}
+func (x *BlobTx) Reset() {
+	*x = BlobTx{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_maelstrom_v1_wire_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -202,13 +216,13 @@ func (x *Tx) Reset() {
 	}
 }
 
-func (x *Tx) String() string {
+func (x *BlobTx) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Tx) ProtoMessage() {}
+func (*BlobTx) ProtoMessage() {}
 
-func (x *Tx) ProtoReflect() protoreflect.Message {
+func (x *BlobTx) ProtoReflect() protoreflect.Message {
 	mi := &file_maelstrom_v1_wire_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -220,35 +234,131 @@ func (x *Tx) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Tx.ProtoReflect.Descriptor instead.
-func (*Tx) Descriptor() ([]byte, []int) {
+// Deprecated: Use BlobTx.ProtoReflect.Descriptor instead.
+func (*BlobTx) Descriptor() ([]byte, []int) {
 	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *Tx) GetSigner() string {
+func (x *BlobTx) GetTxIds() []uint64 {
 	if x != nil {
-		return x.Signer
-	}
-	return ""
-}
-
-func (x *Tx) GetFee() uint64 {
-	if x != nil {
-		return x.Fee
-	}
-	return 0
-}
-
-func (x *Tx) GetTxHash() []byte {
-	if x != nil {
-		return x.TxHash
+		return x.TxIds
 	}
 	return nil
 }
 
-func (x *Tx) GetHeightCommitted() uint64 {
+func (x *BlobTx) GetTimeoutHeight() uint64 {
 	if x != nil {
-		return x.HeightCommitted
+		return x.TimeoutHeight
+	}
+	return 0
+}
+
+type WithdrawalTx struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Withdrawals   []*Withdrawal `protobuf:"bytes,1,rep,name=withdrawals,proto3" json:"withdrawals,omitempty"`
+	TimeoutHeight uint64        `protobuf:"varint,2,opt,name=timeout_height,json=timeoutHeight,proto3" json:"timeout_height,omitempty"`
+}
+
+func (x *WithdrawalTx) Reset() {
+	*x = WithdrawalTx{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_maelstrom_v1_wire_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WithdrawalTx) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WithdrawalTx) ProtoMessage() {}
+
+func (x *WithdrawalTx) ProtoReflect() protoreflect.Message {
+	mi := &file_maelstrom_v1_wire_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WithdrawalTx.ProtoReflect.Descriptor instead.
+func (*WithdrawalTx) Descriptor() ([]byte, []int) {
+	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *WithdrawalTx) GetWithdrawals() []*Withdrawal {
+	if x != nil {
+		return x.Withdrawals
+	}
+	return nil
+}
+
+func (x *WithdrawalTx) GetTimeoutHeight() uint64 {
+	if x != nil {
+		return x.TimeoutHeight
+	}
+	return 0
+}
+
+type Withdrawal struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Amount  uint64 `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+}
+
+func (x *Withdrawal) Reset() {
+	*x = Withdrawal{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_maelstrom_v1_wire_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Withdrawal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Withdrawal) ProtoMessage() {}
+
+func (x *Withdrawal) ProtoReflect() protoreflect.Message {
+	mi := &file_maelstrom_v1_wire_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Withdrawal.ProtoReflect.Descriptor instead.
+func (*Withdrawal) Descriptor() ([]byte, []int) {
+	return file_maelstrom_v1_wire_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *Withdrawal) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *Withdrawal) GetAmount() uint64 {
+	if x != nil {
+		return x.Amount
 	}
 	return 0
 }
@@ -271,18 +381,30 @@ var file_maelstrom_v1_wire_proto_rawDesc = []byte{
 	0x4f, 0x57, 0x4e, 0x10, 0x00, 0x12, 0x0d, 0x0a, 0x09, 0x53, 0x45, 0x43, 0x50, 0x32, 0x35, 0x36,
 	0x52, 0x31, 0x10, 0x01, 0x12, 0x0d, 0x0a, 0x09, 0x53, 0x45, 0x43, 0x50, 0x32, 0x35, 0x36, 0x4b,
 	0x31, 0x10, 0x02, 0x12, 0x0b, 0x0a, 0x07, 0x45, 0x44, 0x32, 0x35, 0x35, 0x31, 0x39, 0x10, 0x03,
-	0x22, 0x1e, 0x0a, 0x05, 0x42, 0x61, 0x74, 0x63, 0x68, 0x12, 0x15, 0x0a, 0x06, 0x74, 0x78, 0x5f,
+	0x22, 0x4d, 0x0a, 0x08, 0x42, 0x6c, 0x6f, 0x62, 0x4d, 0x65, 0x74, 0x61, 0x12, 0x16, 0x0a, 0x06,
+	0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x69,
+	0x67, 0x6e, 0x65, 0x72, 0x12, 0x10, 0x0a, 0x03, 0x66, 0x65, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x04, 0x52, 0x03, 0x66, 0x65, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x74, 0x78, 0x5f, 0x68, 0x61, 0x73,
+	0x68, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x74, 0x78, 0x48, 0x61, 0x73, 0x68, 0x22,
+	0x46, 0x0a, 0x06, 0x42, 0x6c, 0x6f, 0x62, 0x54, 0x78, 0x12, 0x15, 0x0a, 0x06, 0x74, 0x78, 0x5f,
 	0x69, 0x64, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x04, 0x52, 0x05, 0x74, 0x78, 0x49, 0x64, 0x73,
-	0x22, 0x72, 0x0a, 0x02, 0x54, 0x78, 0x12, 0x16, 0x0a, 0x06, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x73, 0x69, 0x67, 0x6e, 0x65, 0x72, 0x12, 0x10,
-	0x0a, 0x03, 0x66, 0x65, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x66, 0x65, 0x65,
-	0x12, 0x17, 0x0a, 0x07, 0x74, 0x78, 0x5f, 0x68, 0x61, 0x73, 0x68, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x0c, 0x52, 0x06, 0x74, 0x78, 0x48, 0x61, 0x73, 0x68, 0x12, 0x29, 0x0a, 0x10, 0x68, 0x65, 0x69,
-	0x67, 0x68, 0x74, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x64, 0x18, 0x04, 0x20,
-	0x01, 0x28, 0x04, 0x52, 0x0f, 0x68, 0x65, 0x69, 0x67, 0x68, 0x74, 0x43, 0x6f, 0x6d, 0x6d, 0x69,
-	0x74, 0x74, 0x65, 0x64, 0x42, 0x1f, 0x5a, 0x1d, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x63, 0x6d, 0x77, 0x61, 0x74, 0x65, 0x72, 0x73, 0x2f, 0x6d, 0x61, 0x65, 0x6c,
-	0x73, 0x74, 0x72, 0x6f, 0x6d, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x12, 0x25, 0x0a, 0x0e, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x5f, 0x68, 0x65, 0x69, 0x67,
+	0x68, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0d, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75,
+	0x74, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0x71, 0x0a, 0x0c, 0x57, 0x69, 0x74, 0x68, 0x64,
+	0x72, 0x61, 0x77, 0x61, 0x6c, 0x54, 0x78, 0x12, 0x3a, 0x0a, 0x0b, 0x77, 0x69, 0x74, 0x68, 0x64,
+	0x72, 0x61, 0x77, 0x61, 0x6c, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x6d,
+	0x61, 0x65, 0x6c, 0x73, 0x74, 0x72, 0x6f, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x57, 0x69, 0x74, 0x68,
+	0x64, 0x72, 0x61, 0x77, 0x61, 0x6c, 0x52, 0x0b, 0x77, 0x69, 0x74, 0x68, 0x64, 0x72, 0x61, 0x77,
+	0x61, 0x6c, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x5f, 0x68,
+	0x65, 0x69, 0x67, 0x68, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0d, 0x74, 0x69, 0x6d,
+	0x65, 0x6f, 0x75, 0x74, 0x48, 0x65, 0x69, 0x67, 0x68, 0x74, 0x22, 0x3e, 0x0a, 0x0a, 0x57, 0x69,
+	0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x61, 0x6c, 0x12, 0x18, 0x0a, 0x07, 0x61, 0x64, 0x64, 0x72,
+	0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x61, 0x64, 0x64, 0x72, 0x65,
+	0x73, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x06, 0x61, 0x6d, 0x6f, 0x75, 0x6e, 0x74, 0x42, 0x1f, 0x5a, 0x1d, 0x67, 0x69,
+	0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x6d, 0x77, 0x61, 0x74, 0x65, 0x72,
+	0x73, 0x2f, 0x6d, 0x61, 0x65, 0x6c, 0x73, 0x74, 0x72, 0x6f, 0x6d, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
@@ -298,20 +420,23 @@ func file_maelstrom_v1_wire_proto_rawDescGZIP() []byte {
 }
 
 var file_maelstrom_v1_wire_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_maelstrom_v1_wire_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_maelstrom_v1_wire_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_maelstrom_v1_wire_proto_goTypes = []interface{}{
 	(Account_PubKeyType)(0), // 0: maelstrom.v1.Account.PubKeyType
 	(*Account)(nil),         // 1: maelstrom.v1.Account
-	(*Batch)(nil),           // 2: maelstrom.v1.Batch
-	(*Tx)(nil),              // 3: maelstrom.v1.Tx
+	(*BlobMeta)(nil),        // 2: maelstrom.v1.BlobMeta
+	(*BlobTx)(nil),          // 3: maelstrom.v1.BlobTx
+	(*WithdrawalTx)(nil),    // 4: maelstrom.v1.WithdrawalTx
+	(*Withdrawal)(nil),      // 5: maelstrom.v1.Withdrawal
 }
 var file_maelstrom_v1_wire_proto_depIdxs = []int32{
 	0, // 0: maelstrom.v1.Account.pub_key_type:type_name -> maelstrom.v1.Account.PubKeyType
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 1: maelstrom.v1.WithdrawalTx.withdrawals:type_name -> maelstrom.v1.Withdrawal
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_maelstrom_v1_wire_proto_init() }
@@ -333,7 +458,7 @@ func file_maelstrom_v1_wire_proto_init() {
 			}
 		}
 		file_maelstrom_v1_wire_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Batch); i {
+			switch v := v.(*BlobMeta); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -345,7 +470,31 @@ func file_maelstrom_v1_wire_proto_init() {
 			}
 		}
 		file_maelstrom_v1_wire_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Tx); i {
+			switch v := v.(*BlobTx); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_maelstrom_v1_wire_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WithdrawalTx); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_maelstrom_v1_wire_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Withdrawal); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -363,7 +512,7 @@ func file_maelstrom_v1_wire_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_maelstrom_v1_wire_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -9,13 +9,14 @@ import (
 )
 
 const (
-	LastTxIDPrefix    = byte(0x03)
-	PendingTxPrefix   = byte(0x04)
-	BatchIDPrefix     = byte(0x05)
-	BroadcastedPrefix = byte(0x06)
-	NoncePrefix       = byte(0x07)
-	ExpiredTxPrefix   = byte(0x08)
-	CommittedTxPrefix = byte(0x09)
+	LastTxIDPrefix                = byte(0x03)
+	PendingTxPrefix               = byte(0x04)
+	BroadcastedBlobTxPrefix       = byte(0x05)
+	NoncePrefix                   = byte(0x06)
+	ExpiredTxPrefix               = byte(0x07)
+	CommittedTxPrefix             = byte(0x08)
+	WithdrawalPrefix              = byte(0x09)
+	BroadcastedWithdrawalTxPrefix = byte(0x0A)
 
 	StartingTxNumber = 0
 )
@@ -33,74 +34,87 @@ func NewStore(db *badger.DB) (*Store, error) {
 	}, nil
 }
 
-func (s *Store) GetLastTxKey() (ID, error) {
-	var txID ID
+func (s *Store) GetLastBlobKey() (BlobID, error) {
+	var blobID BlobID
 	err := s.db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(LastTxIDKey())
+		item, err := txn.Get(LastBlobIDKey())
 		if err != nil {
 			return err
 		}
 		return item.Value(func(val []byte) error {
-			txID = TxIDFromBytes(val)
+			blobID = BlobIDFromKey(val)
 			return nil
 		})
 	})
-	return txID, err
+	return blobID, err
 }
 
-func LastTxIDKey() []byte {
+func LastBlobIDKey() []byte {
 	return []byte{LastTxIDPrefix}
 }
 
-func PendingTxKey(txID ID) []byte {
-	return storeKey(PendingTxPrefix, txID)
+func PendingBlobKey(id BlobID) []byte {
+	return storeKey(PendingTxPrefix, id)
 }
 
-func BatchKey(batchID BatchID) []byte {
-	return append([]byte{BatchIDPrefix}, batchID.Bytes()...)
+func BroadcastedBlobTxKey(id TxID) []byte {
+	return append([]byte{BroadcastedBlobTxPrefix}, id.Bytes()...)
 }
 
-func BroadcastedBatchKey(batchID BatchID) []byte {
-	return append([]byte{BroadcastedPrefix}, batchID.Bytes()...)
-}
-
-func CommittedTxKey(id ID) []byte {
+func CommittedBlobKey(id BlobID) []byte {
 	return storeKey(CommittedTxPrefix, id)
 }
 
-func ExpiredTxKey(id ID) []byte {
+func ExpiredBlobKey(id BlobID) []byte {
 	return storeKey(ExpiredTxPrefix, id)
 }
 
 func NonceKey(nonce uint64) []byte {
-	return storeKey(NoncePrefix, ID(nonce))
+	return storeKey(NoncePrefix, BlobID(nonce))
 }
 
-func storeKey(prefix byte, txID ID) []byte {
-	buf := bytes.NewBuffer([]byte{prefix})
-	_, err := buf.Write(binary.BigEndian.AppendUint64(nil, uint64(txID)))
+func WithdrawalKey(address string) []byte {
+	buf := bytes.NewBuffer([]byte{WithdrawalPrefix})
+	_, err := buf.Write([]byte(address))
 	if err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
 }
 
-func TxIDFromBytes(b []byte) ID {
-	if len(b) != 9 {
-		panic("invalid tx key")
-	}
-	return ID(binary.BigEndian.Uint64(b[1:]))
+func BroadcastedWithdrawalTxKey(id TxID) []byte {
+	return append([]byte{BroadcastedWithdrawalTxPrefix}, id.Bytes()...)
 }
 
-func BatchIDFromBytes(b []byte) BatchID {
-	return BatchID(b[1:])
+func storeKey(prefix byte, id BlobID) []byte {
+	buf := bytes.NewBuffer([]byte{prefix})
+	_, err := buf.Write(binary.BigEndian.AppendUint64(nil, uint64(id)))
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+func ParseAddressFromKey(withdrawalKey []byte) string {
+	return string(withdrawalKey[1:])
+}
+
+func BlobIDFromKey(key []byte) BlobID {
+	if len(key) != 9 {
+		panic("invalid tx key")
+	}
+	return BlobID(binary.BigEndian.Uint64(key[1:]))
+}
+
+func TxIDFromKey(key []byte) TxID {
+	return TxID(key[1:])
 }
 
 func checkAndSetTxKey(db *badger.DB) error {
 	return db.Update(func(txn *badger.Txn) error {
-		_, err := txn.Get(LastTxIDKey())
+		_, err := txn.Get(LastBlobIDKey())
 		if errors.Is(err, badger.ErrKeyNotFound) {
-			return txn.Set(LastTxIDKey(), PendingTxKey(StartingTxNumber))
+			return txn.Set(LastBlobIDKey(), PendingBlobKey(StartingTxNumber))
 		}
 		return err
 	})
