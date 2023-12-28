@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -106,7 +107,6 @@ func (c *Client) Confirm(ctx context.Context, id uint64) ([]byte, error) {
 				return nil, fmt.Errorf("tx with id %d not found", id)
 			default:
 				return nil, fmt.Errorf("unknown status %v", resp.Status)
-
 			}
 		}
 	}
@@ -123,4 +123,68 @@ func (c *Client) Cancel(ctx context.Context, id uint64) error {
 		Signature: signature,
 	})
 	return err
+}
+
+func (c *Client) Withdraw(ctx context.Context, amount uint64) error {
+	balance, err := c.Balance(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get balance: %w", err)
+	}
+	if amount > balance {
+		return fmt.Errorf("amount greater than balance: %d > %d", amount, balance)
+	}
+
+	return c.withdraw(ctx, balance, amount)
+}
+
+func (c *Client) WithdrawAll(ctx context.Context) error {
+	balance, err := c.Balance(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get balance: %w", err)
+	}
+	return c.withdraw(ctx, balance, balance)
+}
+
+func (c *Client) withdraw(ctx context.Context, balance, amount uint64) error {
+	now := uint64(time.Now().UTC().Unix())
+	addr := c.signer.Address().String()
+	msg := server.WithdrawRequestSignOverData(addr, balance, amount, now)
+	signature, _, err := c.keys.SignByAddress(c.signer.Address(), msg)
+	if err != nil {
+		return fmt.Errorf("failed to sign withdraw request: %w", err)
+	}
+
+	_, err = c.client.Withdraw(ctx, &maelstrom.WithdrawRequest{
+		Signer:    addr,
+		Balance:   balance,
+		Amount:    amount,
+		Timestamp: now,
+		Signature: signature,
+	})
+	if err != nil {
+		return err
+	}
+
+	// wait for up to a minute for the withdrawal to be confirmed
+	subCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+	ticker := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-subCtx.Done():
+			return errors.New("unable to confirm withdrawal after timeout (1 minute)")
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			resp, err := c.client.PendingWithdrawal(subCtx, &maelstrom.PendingWithdrawalRequest{
+				Address: addr,
+			})
+			if err != nil {
+				return fmt.Errorf("querying pending withdrawal: %w", err)
+			}
+			if resp.Amount == 0 {
+				return nil
+			}
+		}
+	}
 }

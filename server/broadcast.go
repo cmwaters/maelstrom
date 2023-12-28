@@ -4,9 +4,12 @@ import (
 	"context"
 	"math"
 
+	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	blob "github.com/celestiaorg/celestia-app/x/blob/types"
 	"github.com/cmwaters/maelstrom/tx"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
@@ -71,18 +74,90 @@ func (s *Server) broadcastPFB() error {
 	}
 	s.log.Info().
 		Str("tx hash", txID.HEX()).
-		Int("txs", len(txs)).
+		Int("blobs", len(txs)).
 		Uint64("fee", fee).
 		Msg("broadcasted pay for blob")
 	return nil
 }
 
 func (s *Server) broadcastWithdrawals() error {
-	withdrawals := s.pool.PopAllWithdrawals()
+	withdrawals := s.pool.GetAllWithdrawals()
 	if len(withdrawals) == 0 {
 		// nothing to broadcast, so skip
 		return nil
 	}
+
+	// the nodes own address
+	sender := s.signer.Address()
+
+	sends := make([]sdk.Msg, len(withdrawals))
+	i := 0
+	for address, amount := range withdrawals {
+		coins := sdk.NewCoins(sdk.NewInt64Coin(app.BondDenom, int64(amount)))
+		sends[i] = &bank.MsgSend{
+			FromAddress: sender.String(),
+			ToAddress:   address,
+			Amount:      coins,
+		}
+	}
+
+	gasPrice := s.feeMonitor.GasPrice()
+
+	// FIXME: (hack) this increments the sequence in the background
+	sequence := s.signer.GetSequence()
+	s.signer.ForceSetSequence(sequence)
+	txBytes, err := s.signer.CreateTx(
+		sends,
+		user.SetGasLimitAndFee(100_000, gasPrice),
+	)
+	if err != nil {
+		s.log.Error().Err(err).Msg("failed to create tx")
+		return nil
+	}
+	s.signer.ForceSetSequence(sequence)
+
+	gasUsed, err := s.feeMonitor.EstimateGas(context.Background(), txBytes)
+	if err != nil {
+		s.log.Error().Err(err).Msg("failed to estimate gas for send tx")
+		return nil
+	}
+
+	// add a margin of 10%
+	gasUsed = gasUsed + (gasUsed / 10)
+	fee := uint64(math.Ceil(float64(gasUsed) * gasPrice))
+	currentHeight := s.store.GetHeight()
+	timeoutHeight := currentHeight + heightTimeout
+
+	txBytes, err = s.signer.CreateTx(
+		sends,
+		user.SetGasLimit(gasUsed),
+		user.SetFee(fee),
+		user.SetTimeoutHeight(timeoutHeight),
+	)
+	if err != nil {
+		s.log.Error().Err(err).Msg("failed to create tx")
+		return nil
+	}
+
+	txID := tx.GetTxID(txBytes)
+	if err := s.pool.MarkWithdrawalTxBroadcasted(txID, withdrawals, timeoutHeight); err != nil {
+		s.log.Error().Err(err).Msg("failed to batch txs")
+		return nil
+	}
+
+	resp, err := s.signer.BroadcastTx(context.Background(), txBytes)
+	if err != nil {
+		s.log.Error().Err(err).Msg("failed to broadcast tx")
+		return s.pool.MarkWithdrawalTxFailed(txID)
+	} else if resp.Code != 0 {
+		s.log.Error().Uint32("code", resp.Code).Str("raw log", resp.RawLog).Msg("failed to submit tx")
+		return s.pool.MarkWithdrawalTxFailed(txID)
+	}
+	s.log.Info().
+		Str("tx hash", txID.HEX()).
+		Int("withdrawals", len(withdrawals)).
+		Uint64("fee", fee).
+		Msg("broadcasted msg send for withdrawals")
 
 	return nil
 }

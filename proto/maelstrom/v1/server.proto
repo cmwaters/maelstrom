@@ -25,6 +25,9 @@ service Blob {
     rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
         option (google.api.http) = { post: "/v1/withdraw", body: "*" };
     }
+    rpc PendingWithdrawal(PendingWithdrawalRequest) returns (PendingWithdrawalResponse) {
+        option (google.api.http) = { get: "/v1/pending_withdrawal/{address}" };
+    }
 }
 
 message InfoRequest {}
@@ -101,3 +104,11 @@ message WithdrawRequest {
 }
 
 message WithdrawResponse {}
+
+message PendingWithdrawalRequest {
+    string address = 1;
+}
+
+message PendingWithdrawalResponse {
+    uint64 amount = 1;
+}

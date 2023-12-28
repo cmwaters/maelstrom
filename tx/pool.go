@@ -131,6 +131,10 @@ func (p *Pool) Update(height uint64) (int, error) {
 		return 0, err
 	}
 
+	if _, err = p.updateWithdrawalTxs(height); err != nil {
+		return 0, err
+	}
+
 	p.latestHeight = height
 	return expiredTxs + timedOutTxs, nil
 }

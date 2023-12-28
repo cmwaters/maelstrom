@@ -19,12 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Blob_Info_FullMethodName     = "/maelstrom.v1.Blob/Info"
-	Blob_Submit_FullMethodName   = "/maelstrom.v1.Blob/Submit"
-	Blob_Status_FullMethodName   = "/maelstrom.v1.Blob/Status"
-	Blob_Balance_FullMethodName  = "/maelstrom.v1.Blob/Balance"
-	Blob_Cancel_FullMethodName   = "/maelstrom.v1.Blob/Cancel"
-	Blob_Withdraw_FullMethodName = "/maelstrom.v1.Blob/Withdraw"
+	Blob_Info_FullMethodName              = "/maelstrom.v1.Blob/Info"
+	Blob_Submit_FullMethodName            = "/maelstrom.v1.Blob/Submit"
+	Blob_Status_FullMethodName            = "/maelstrom.v1.Blob/Status"
+	Blob_Balance_FullMethodName           = "/maelstrom.v1.Blob/Balance"
+	Blob_Cancel_FullMethodName            = "/maelstrom.v1.Blob/Cancel"
+	Blob_Withdraw_FullMethodName          = "/maelstrom.v1.Blob/Withdraw"
+	Blob_PendingWithdrawal_FullMethodName = "/maelstrom.v1.Blob/PendingWithdrawal"
 )
 
 // BlobClient is the client API for Blob service.
@@ -37,6 +38,7 @@ type BlobClient interface {
 	Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
 	Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error)
+	PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error)
 }
 
 type blobClient struct {
@@ -101,6 +103,15 @@ func (c *blobClient) Withdraw(ctx context.Context, in *WithdrawRequest, opts ...
 	return out, nil
 }
 
+func (c *blobClient) PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error) {
+	out := new(PendingWithdrawalResponse)
+	err := c.cc.Invoke(ctx, Blob_PendingWithdrawal_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BlobServer is the server API for Blob service.
 // All implementations must embed UnimplementedBlobServer
 // for forward compatibility
@@ -111,6 +122,7 @@ type BlobServer interface {
 	Balance(context.Context, *BalanceRequest) (*BalanceResponse, error)
 	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
 	Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error)
+	PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error)
 	mustEmbedUnimplementedBlobServer()
 }
 
@@ -135,6 +147,9 @@ func (UnimplementedBlobServer) Cancel(context.Context, *CancelRequest) (*CancelR
 }
 func (UnimplementedBlobServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Withdraw not implemented")
+}
+func (UnimplementedBlobServer) PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PendingWithdrawal not implemented")
 }
 func (UnimplementedBlobServer) mustEmbedUnimplementedBlobServer() {}
 
@@ -257,6 +272,24 @@ func _Blob_Withdraw_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Blob_PendingWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PendingWithdrawalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlobServer).PendingWithdrawal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Blob_PendingWithdrawal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlobServer).PendingWithdrawal(ctx, req.(*PendingWithdrawalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Blob_ServiceDesc is the grpc.ServiceDesc for Blob service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -287,6 +320,10 @@ var Blob_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Withdraw",
 			Handler:    _Blob_Withdraw_Handler,
+		},
+		{
+			MethodName: "PendingWithdrawal",
+			Handler:    _Blob_PendingWithdrawal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

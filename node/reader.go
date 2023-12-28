@@ -106,6 +106,7 @@ func Sync(
 		// loop through all transactions and check which of the nodes broadcasted
 		// transactions have been included in the block. Then mark them as committed
 		committedCounter := 0
+		withdrawalCounter := 0
 		for _, blockTx := range blockTxs {
 			txID := tx.GetTxID(blockTx)
 			if pool.WasBroadcasted(txID) {
@@ -119,6 +120,13 @@ func Sync(
 					return err
 				}
 				committedCounter++
+			}
+			if pool.WasWithdrawalBroadcasted(txID) {
+				withdrawals, err := pool.MarkWithdrawalsComplete(txID)
+				if err != nil {
+					return err
+				}
+				withdrawalCounter += withdrawals
 			}
 		}
 
@@ -140,6 +148,7 @@ func Sync(
 			Int("confirmed_txs", committedCounter).
 			Int("failed_txs", failedTxs).
 			Int("deposits", len(sendTxs)).
+			Int("withdrawals", withdrawalCounter).
 			Int("total_txs", len(blockTxs)).
 			Msg("processed block")
 	}

@@ -104,8 +104,9 @@ func (s *Server) Serve(ctx context.Context) error {
 		if err != nil && firstErr == nil {
 			firstErr = err
 			cancel()
-		} else if !errors.Is(err, context.Canceled) {
-			s.log.Error().Err(err).Msg("shutting down")
+		} else if err != nil && !errors.Is(err, context.Canceled) {
+			// the following errors have been non nil
+			s.log.Error().Err(err).Msg("while shutting down")
 		}
 	}
 	return firstErr
@@ -124,8 +125,9 @@ func (s *Server) Wait() {
 
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
 	return &maelstrom.InfoResponse{
-		Address: s.signer.Address().String(),
-		Height:  s.store.GetHeight(),
+		Address:     s.signer.Address().String(),
+		Height:      s.store.GetHeight(),
+		MinGasPrice: s.feeMonitor.GasPrice(),
 	}, nil
 }
 
@@ -228,6 +230,12 @@ func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (
 	}
 
 	return &maelstrom.WithdrawResponse{}, nil
+}
+
+func (s *Server) PendingWithdrawal(ctx context.Context, req *maelstrom.PendingWithdrawalRequest) (*maelstrom.PendingWithdrawalResponse, error) {
+	return &maelstrom.PendingWithdrawalResponse{
+		Amount: s.pool.GetPendingWithdrawalAmount(req.Address),
+	}, nil
 }
 
 func (s *Server) getAccount(ctx context.Context, address string) (*account.Account, error) {

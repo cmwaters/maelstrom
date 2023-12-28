@@ -5,9 +5,11 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
+	"github.com/celestiaorg/celestia-app/pkg/appconsts"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/celestiaorg/celestia-app/test/util/testnode"
 	client "github.com/cmwaters/maelstrom/client/go"
@@ -47,12 +49,12 @@ func (s *EndToEndTestSuite) SetupSuite() {
 	testCtx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
 	cfg := testnode.DefaultConfig().WithAccounts([]string{serverAcc, clientAcc})
+	require.Equal(t, cfg.TmConfig.TxIndex.Indexer, "kv")
 	nctx, rpcAddr, grpcAddr := testnode.NewNetwork(t, cfg)
 	s.nctx = nctx
 
-	err := nctx.WaitForNextBlock()
+	_, err := nctx.WaitForHeight(5)
 	require.NoError(t, err)
-	require.Equal(t, cfg.TmConfig.TxIndex.Indexer, "kv")
 
 	config := server.DefaultConfig().WithDir(t.TempDir()).WithKeyring(nctx.Keyring)
 	config.CelestiaGRPCAddress = grpcAddr
@@ -97,6 +99,7 @@ func (s *EndToEndTestSuite) TestA_Info() {
 	s.Require().NoError(err)
 	s.Require().Equal(addr.String(), resp.Address)
 	s.Require().Greater(resp.Height, uint64(1))
+	s.Require().Equal(appconsts.DefaultMinGasPrice, resp.MinGasPrice)
 }
 
 func (s *EndToEndTestSuite) TestB_Deposit() {
@@ -167,6 +170,22 @@ func (s *EndToEndTestSuite) TestD_Cancel() {
 	balanceAfter, err := s.client.Balance(context.Background())
 	s.Require().NoError(err)
 	s.Require().Equal(balanceBefore, balanceAfter)
+}
+
+func (s *EndToEndTestSuite) TestE_Withdrawal() {
+	balanceBefore, err := s.client.Balance(context.Background())
+	s.Require().NoError(err)
+
+	withdrawalAmount := balanceBefore - 10_000
+
+	err = s.client.Withdraw(context.Background(), withdrawalAmount)
+	s.Require().NoError(err)
+
+	s.Require().Eventually(func() bool {
+		balanceAfter, err := s.client.Balance(context.Background())
+		s.Require().NoError(err)
+		return balanceAfter == 10_000
+	}, 5*time.Second, 200*time.Millisecond)
 }
 
 func (s *EndToEndTestSuite) TearDownSuite() {

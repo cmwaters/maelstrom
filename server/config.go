@@ -142,7 +142,10 @@ func (cfg *Config) NewServer(ctx context.Context) (*Server, error) {
 	}
 
 	accountRetriever := account.NewQuerier(grpcConn)
-	feeMonitor := node.NewFeeMonitor(grpcConn)
+	feeMonitor, err := node.NewFeeMonitor(ctx, grpcConn)
+	if err != nil {
+		return nil, err
+	}
 
 	return New(logger, cfg, txPool, accountStore, signer, accountRetriever, feeMonitor), nil
 }
