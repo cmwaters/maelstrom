@@ -25,6 +25,7 @@ func main() {
 		submitCmd,
 		depositCmd,
 		addressCmd,
+		withdrawCmd,
 	)
 
 	if err := cmd.Execute(); err != nil {
