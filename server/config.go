@@ -58,7 +58,7 @@ func DefaultConfig() *Config {
 func LoadConfig(path string) (*Config, error) {
 	c := DefaultConfig()
 	_, err := toml.DecodeFile(path, c)
-	c.dir = path
+	c.dir = filepath.Dir(path)
 	return c, err
 }
 
@@ -185,7 +185,11 @@ func (cfg *Config) Keyring() (keyring.Keyring, error) {
 		return cfg.keyring, nil
 	}
 
+	fmt.Println(cfg.KeyringDir())
 	kr, err := keyring.New(app.Name, keyring.BackendTest, cfg.KeyringDir(), nil, cdc.Codec)
+	if err != nil {
+		return nil, err
+	}
 	cfg.keyring = kr
-	return kr, err
+	return kr, nil
 }

@@ -1,15 +1,15 @@
 #!/bin/bash
 
-make build-server
-make build-client
+make install-server
+make install-client
 
 mkdir -p temp/client
 mkdir -p temp/server
 
 cd temp/server
 echo "Initializing maelstrom server..."
-../../bin/server/maelstrom init 
+ms init 
 
 cd ../../temp/client
 echo "Starting maelstrom client..."
-../../bin/client/maelstrom init
+maelstrom init

@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/celestiaorg/celestia-app/pkg/appconsts"
 	"github.com/cosmos/cosmos-sdk/client/grpc/node"
@@ -38,6 +39,7 @@ func (fm *FeeMonitor) getMinGasPrice(ctx context.Context) error {
 	if resp.MinimumGasPrice == "" {
 		fm.minGasPrice = appconsts.DefaultMinGasPrice
 	} else {
+		resp.MinimumGasPrice = strings.TrimSuffix(resp.MinimumGasPrice, appconsts.BondDenom)
 		fm.minGasPrice, err = strconv.ParseFloat(resp.MinimumGasPrice, 64)
 	}
 	return err
