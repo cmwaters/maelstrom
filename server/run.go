@@ -16,6 +16,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	rpc "github.com/tendermint/tendermint/rpc/client/http"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -46,7 +47,13 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterBlobServer(grpcServer, s)
-	grpcGatewayMux := runtime.NewServeMux()
+	grpcGatewayMux := runtime.NewServeMux(runtime.WithForwardResponseOption(func(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
+		// Enable CORs
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		return nil
+	}))
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	if err := maelstrom.RegisterBlobHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
 		return fmt.Errorf("error registering grpc endpoint: %w", err)
