@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 
-	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	wire "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 )
 
 type BlobID uint64

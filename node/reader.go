@@ -33,10 +33,10 @@ func Read(
 	address := sdk.AccAddress(pubKey.Address()).String()
 	log.Info().Str("address", address).Uint64("height", latestStoreHeight).Msg("starting chain reader")
 
-	ticker := time.NewTicker(time.Second)
+	timer := time.NewTimer(0)
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			head, err := client.Header(ctx, nil)
 			if err != nil {
 				return err
@@ -48,6 +48,7 @@ func Read(
 				}
 				latestStoreHeight = headerHeight
 			}
+			timer.Reset(time.Second)
 		case <-ctx.Done():
 			return ctx.Err()
 		}

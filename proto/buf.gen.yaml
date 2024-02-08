@@ -1,15 +1,27 @@
 version: v1
 plugins:
   - plugin: buf.build/grpc-ecosystem/gateway:v2.18.0
-    out: gen
+    out: gen/go
     opt:
       - paths=source_relative
   # dependencies
   - plugin: buf.build/protocolbuffers/go
-    out: gen
+    out: gen/go
     opt:
       - paths=source_relative
   - plugin: buf.build/grpc/go
-    out: gen
+    out: gen/go
     opt:
       - paths=source_relative
+  - plugin: buf.build/grpc/web:v1.5.0
+    out: gen/js
+    opt:
+      - mode=grpcwebtext
+      - import_style=typescript
+  - plugin: buf.build/protocolbuffers/js
+    out: gen/js
+    opt:
+      - import_style=es6
+  - plugin: buf.build/grpc-ecosystem/openapiv2:v2.16.2
+    out: gen/openapiv2
+    

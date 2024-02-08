@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/celestiaorg/celestia-app/pkg/appconsts"
@@ -13,113 +13,45 @@ import (
 	blobtypes "github.com/celestiaorg/celestia-app/x/blob/types"
 	"github.com/cmwaters/maelstrom/account"
 	"github.com/cmwaters/maelstrom/node"
-	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	maelstrom "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/tx"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/rs/zerolog"
-
-	"github.com/tendermint/tendermint/rpc/client/http"
-	"google.golang.org/grpc"
 )
 
 var _ maelstrom.BlobServer = (*Server)(nil)
+
+type Server struct {
+	isConnected      atomic.Bool
+	log              zerolog.Logger
+	config           *Config
+	pool             *tx.Pool
+	store            *account.Store
+	keys             keyring.Keyring
+	signer           *user.Signer
+	address          sdk.AccAddress
+	accountRetriever *account.Querier
+	feeMonitor       *node.FeeMonitor
+	maelstrom.UnimplementedBlobServer
+}
 
 func New(
 	log zerolog.Logger,
 	config *Config,
 	pool *tx.Pool,
 	store *account.Store,
-	signer *user.Signer,
-	accountRetriever *account.Querier,
-	feeMonitor *node.FeeMonitor,
+	keys keyring.Keyring,
+	address sdk.AccAddress,
 ) *Server {
 	return &Server{
-		log:              log,
-		config:           config,
-		pool:             pool,
-		store:            store,
-		signer:           signer,
-		accountRetriever: accountRetriever,
-		feeMonitor:       feeMonitor,
-	}
-}
-
-type Server struct {
-	log              zerolog.Logger
-	config           *Config
-	pool             *tx.Pool
-	store            *account.Store
-	signer           *user.Signer
-	accountRetriever *account.Querier
-	feeMonitor       *node.FeeMonitor
-	maelstrom.UnimplementedBlobServer
-}
-
-func (s *Server) Serve(ctx context.Context) error {
-	client, err := http.New(s.config.CelestiaRPCAddress, "/websocket")
-	if err != nil {
-		return fmt.Errorf("failed to create client: %w", err)
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	releaser := node.NewReleaser(client, s.config.TimeoutCommit-time.Second, s.broadcastTx)
-
-	grpcServer := grpc.NewServer()
-	maelstrom.RegisterBlobServer(grpcServer, s)
-	listener, err := net.Listen("tcp", s.config.GRPCServerAddress)
-	defer func() {
-		err := listener.Close()
-		if err != nil {
-			s.log.Error().Err(err).Msg("failed to close listener")
-		}
-	}()
-	if err != nil {
-		return fmt.Errorf("failed to setup listener: %w", err)
-	}
-
-	threads := 3
-	errCh := make(chan error, threads)
-
-	go func() {
-		<-ctx.Done()
-		grpcServer.GracefulStop()
-	}()
-	go func() {
-		s.log.Info().Str("address", s.config.GRPCServerAddress).Msg("starting gRPC server")
-		errCh <- grpcServer.Serve(listener)
-	}()
-	go func() {
-		errCh <- node.Read(ctx, s.log, client, s.store, s.pool)
-	}()
-	go func() {
-		s.log.Info().Msg("starting releaser")
-		errCh <- releaser.Start(ctx)
-	}()
-
-	var firstErr error
-	for i := 0; i < threads; i++ {
-		err := <-errCh
-		if err != nil && firstErr == nil {
-			firstErr = err
-			cancel()
-		} else if err != nil && !errors.Is(err, context.Canceled) {
-			// the following errors have been non nil
-			s.log.Error().Err(err).Msg("while shutting down")
-		}
-	}
-	return firstErr
-}
-
-func (s *Server) Wait() {
-	initialHeight := s.store.GetHeight()
-	ticker := time.NewTicker(100 * time.Millisecond)
-	for range ticker.C {
-		newHeight := s.store.GetHeight()
-		if newHeight > initialHeight {
-			return
-		}
+		log:     log,
+		config:  config,
+		pool:    pool,
+		store:   store,
+		keys:    keys,
+		address: address,
 	}
 }
 

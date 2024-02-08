@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	maelstrom "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"

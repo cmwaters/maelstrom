@@ -10,7 +10,7 @@ import (
 	"github.com/celestiaorg/celestia-app/app"
 	ns "github.com/celestiaorg/celestia-app/pkg/namespace"
 	"github.com/celestiaorg/celestia-app/pkg/user"
-	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	maelstrom "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"

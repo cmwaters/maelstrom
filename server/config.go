@@ -11,17 +11,13 @@ import (
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/celestiaorg/celestia-app/pkg/appconsts"
-	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/cmwaters/maelstrom/account"
-	"github.com/cmwaters/maelstrom/node"
 	"github.com/cmwaters/maelstrom/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgraph-io/badger"
 	"github.com/rs/zerolog"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const (
@@ -38,6 +34,7 @@ var (
 type Config struct {
 	dir                 string
 	GRPCServerAddress   string `toml:"grpc_server_address"`
+	GRPCGatewayAddress  string `toml:"grpc_gateway_address"`
 	CelestiaRPCAddress  string `toml:"celestia_rpc_address"`
 	CelestiaGRPCAddress string `toml:"celestia_grpc_address"`
 	keyring             keyring.Keyring
@@ -48,6 +45,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		GRPCServerAddress:   "0.0.0.0:8080",
+		GRPCGatewayAddress:  "0.0.0.0:8081",
 		CelestiaRPCAddress:  "http://127.0.0.1:26657",
 		CelestiaGRPCAddress: "localhost:9090",
 		KeyringName:         DefaultKeyName,
@@ -112,16 +110,6 @@ func (cfg *Config) NewServer(ctx context.Context) (*Server, error) {
 		return nil, err
 	}
 
-	grpcConn, err := grpc.Dial(cfg.CelestiaGRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-
-	signer, err := user.SetupSigner(ctx, kr, grpcConn, address, cdc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup signer: %w", err)
-	}
-
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 
 	opts := badger.DefaultOptions(cfg.StoreDir())
@@ -131,7 +119,12 @@ func (cfg *Config) NewServer(ctx context.Context) (*Server, error) {
 		return nil, err
 	}
 
-	accountStore, err := account.NewStore(db, signer.PubKey())
+	pk, err := record.GetPubKey()
+	if err != nil {
+		return nil, err
+	}
+
+	accountStore, err := account.NewStore(db, pk)
 	if err != nil {
 		return nil, err
 	}
@@ -141,13 +134,7 @@ func (cfg *Config) NewServer(ctx context.Context) (*Server, error) {
 		return nil, err
 	}
 
-	accountRetriever := account.NewQuerier(grpcConn)
-	feeMonitor, err := node.NewFeeMonitor(ctx, grpcConn)
-	if err != nil {
-		return nil, err
-	}
-
-	return New(logger, cfg, txPool, accountStore, signer, accountRetriever, feeMonitor), nil
+	return New(logger, cfg, txPool, accountStore, kr, address), nil
 }
 
 func (cfg *Config) ImportKey(mnemonic string) (sdk.AccAddress, error) {

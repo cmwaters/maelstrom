@@ -11,7 +11,7 @@ import (
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	client "github.com/cmwaters/maelstrom/client/go"
-	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	"github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc"

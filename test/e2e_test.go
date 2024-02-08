@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	"github.com/celestiaorg/celestia-app/test/util/testnode"
 	client "github.com/cmwaters/maelstrom/client/go"
-	"github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	"github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/cmwaters/maelstrom/tx"
 	"github.com/stretchr/testify/require"
@@ -72,7 +74,9 @@ func (s *EndToEndTestSuite) SetupSuite() {
 		require.Contains(t, err.Error(), context.Canceled.Error())
 	}()
 
-	server.Wait()
+	syncCtx, cancel := context.WithTimeout(testCtx, 30*time.Second)
+	defer cancel()
+	require.NoError(t, server.WaitUntilReady(syncCtx))
 
 	clientConn, err := grpc.Dial(s.config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
@@ -100,6 +104,18 @@ func (s *EndToEndTestSuite) TestA_Info() {
 	s.Require().Equal(addr.String(), resp.Address)
 	s.Require().Greater(resp.Height, uint64(1))
 	s.Require().Equal(appconsts.DefaultMinGasPrice, resp.MinGasPrice)
+
+	// check that the grpc gateway endpoint also works
+	httpResp, err := http.Get("http://" + s.config.GRPCGatewayAddress + "/v1/info")
+	s.Require().NoError(err)
+	s.Require().Equal(http.StatusOK, httpResp.StatusCode)
+	httpRespBody, err := io.ReadAll(httpResp.Body)
+	s.Require().NoError(err)
+	// assert that the same address is returned there. This
+	// is a bit lazy but we don't have the equivalent JSON
+	// based go types to unmarshal into
+	s.Require().Contains(string(httpRespBody), resp.Address)
+	s.T().Log(string(httpRespBody))
 }
 
 func (s *EndToEndTestSuite) TestB_Deposit() {

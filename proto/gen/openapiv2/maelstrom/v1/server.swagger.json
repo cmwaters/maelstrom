@@ -1,0 +1,428 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "maelstrom/v1/server.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Blob"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/balance/{address}": {
+      "get": {
+        "operationId": "Blob_Balance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BalanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/cancel": {
+      "post": {
+        "operationId": "Blob_Cancel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CancelRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/info": {
+      "get": {
+        "operationId": "Blob_Info",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InfoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/pending_withdrawal/{address}": {
+      "get": {
+        "operationId": "Blob_PendingWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PendingWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/status/{id}": {
+      "get": {
+        "operationId": "Blob_Status",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/submit": {
+      "post": {
+        "operationId": "Blob_Submit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubmitRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/withdraw": {
+      "post": {
+        "operationId": "Blob_Withdraw",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WithdrawResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1WithdrawRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "googlerpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "v1BalanceResponse": {
+      "type": "object",
+      "properties": {
+        "balance": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1CancelRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "signature": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1CancelResponse": {
+      "type": "object"
+    },
+    "v1InfoResponse": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "height": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "minGasPrice": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "v1Options": {
+      "type": "object",
+      "properties": {
+        "timeoutBlocks": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "compact": {
+          "type": "boolean"
+        },
+        "namespaceVersion": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "shareVersion": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1PendingWithdrawalResponse": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1StatusResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/v1StatusResponseStatus"
+        },
+        "insertHeight": {
+          "type": "string",
+          "format": "uint64",
+          "title": "If the tx is pending, these fields will be populated"
+        },
+        "expiryHeight": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "txHash": {
+          "type": "string",
+          "format": "byte",
+          "title": "if the tx is committed, thid field will be populated"
+        }
+      }
+    },
+    "v1StatusResponseStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "PENDING",
+        "BROADCASTING",
+        "COMMITTED",
+        "EXPIRED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "v1SubmitRequest": {
+      "type": "object",
+      "properties": {
+        "signer": {
+          "type": "string"
+        },
+        "namespace": {
+          "type": "string",
+          "format": "byte"
+        },
+        "blobs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          }
+        },
+        "fee": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "signature": {
+          "type": "string",
+          "format": "byte"
+        },
+        "options": {
+          "$ref": "#/definitions/v1Options"
+        }
+      }
+    },
+    "v1SubmitResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    },
+    "v1WithdrawRequest": {
+      "type": "object",
+      "properties": {
+        "signer": {
+          "type": "string"
+        },
+        "balance": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "amount": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "signature": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1WithdrawResponse": {
+      "type": "object"
+    }
+  }
+}

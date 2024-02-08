@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/cmwaters/maelstrom/account"
-	maelstrom "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	maelstrom "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/cmwaters/maelstrom/server"
 	"github.com/dgraph-io/badger"
 	"github.com/spf13/cobra"

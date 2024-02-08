@@ -3,7 +3,7 @@ package tx
 import (
 	"errors"
 
-	wire "github.com/cmwaters/maelstrom/proto/gen/maelstrom/v1"
+	wire "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
 	"github.com/dgraph-io/badger"
 	"google.golang.org/protobuf/proto"
 )
