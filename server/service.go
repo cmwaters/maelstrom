@@ -35,6 +35,7 @@ type Server struct {
 	accountRetriever *account.Querier
 	feeMonitor       *node.FeeMonitor
 	maelstrom.UnimplementedBlobServer
+	maelstrom.UnimplementedCosmosServer
 }
 
 func New(
@@ -55,21 +56,27 @@ func New(
 	}
 }
 
+var ErrServerNotReady = errors.New("server not ready")
+
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
 	return &maelstrom.InfoResponse{
-		Address:     s.signer.Address().String(),
+		Address:     s.address.String(),
 		Height:      s.store.GetHeight(),
 		MinGasPrice: s.feeMonitor.GasPrice(),
 	}, nil
 }
 
 func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*maelstrom.SubmitResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
+
 	if err := validateSubmitRequest(req); err != nil {
 		return nil, err
 	}
 
 	// ensure that the transaction pays at least the minimum fee
-	gas := EstimateMinGas(req.Blobs)
+	gas := EstimateMinGas(totalBlobSize(req.Blobs))
 	requiredPrice := uint64(float64(gas) * s.feeMonitor.GasPrice())
 	if req.Fee < requiredPrice {
 		return nil, fmt.Errorf("minimum fee of %dutia required for this transaction", requiredPrice)
@@ -89,20 +96,28 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 		return nil, fmt.Errorf("insufficient balance for signer %s, (have %d, require %d)", req.Signer, acc.Balance, req.Fee)
 	}
 
-	key, err := s.pool.Add(req.Signer, req.Namespace[1:], req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
+	id, err := s.pool.Add(req.Signer, req.Namespace[1:], req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
 	if err != nil {
 		return nil, fmt.Errorf("adding to pool: %w", err)
 	}
 
-	return &maelstrom.SubmitResponse{Id: uint64(key)}, nil
+	return &maelstrom.SubmitResponse{Id: uint64(id)}, nil
 }
 
 func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*maelstrom.StatusResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
+
 	status := s.pool.Status(tx.BlobID(req.Id))
 	return status, nil
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
+
 	acc, err := s.store.GetAccount(req.Address)
 	if err != nil {
 		return nil, err
@@ -113,6 +128,10 @@ func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*m
 }
 
 func (s *Server) Cancel(ctx context.Context, req *maelstrom.CancelRequest) (*maelstrom.CancelResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
+
 	tx := s.pool.GetPendingTx(tx.BlobID(req.Id))
 	if tx == nil {
 		return nil, fmt.Errorf("transaction %d not found", req.Id)
@@ -133,6 +152,10 @@ func (s *Server) Cancel(ctx context.Context, req *maelstrom.CancelRequest) (*mae
 }
 
 func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (*maelstrom.WithdrawResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
+
 	now := uint64(time.Now().UTC().Unix())
 	var tolerance = uint64(10) // 10 seconds
 	if req.Timestamp < now-tolerance || req.Timestamp > now+tolerance {
@@ -165,6 +188,9 @@ func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (
 }
 
 func (s *Server) PendingWithdrawal(ctx context.Context, req *maelstrom.PendingWithdrawalRequest) (*maelstrom.PendingWithdrawalResponse, error) {
+	if !s.isConnected.Load() {
+		return nil, ErrServerNotReady
+	}
 	return &maelstrom.PendingWithdrawalResponse{
 		Amount: s.pool.GetPendingWithdrawalAmount(req.Address),
 	}, nil
@@ -176,14 +202,15 @@ func (s *Server) getAccount(ctx context.Context, address string) (*account.Accou
 		return nil, err
 	}
 
-	// If the public key is not present, we need to retrieve it from the chain
-	// and update the account store.
-	if acc.PubKey == nil {
-		pk, err := s.accountRetriever.GetPubKey(ctx, address)
+	// If the public key / account number is not present, we need to
+	// retrieve it from the chain and update the account store.
+	if !acc.IsSet() {
+		pk, accNum, err := s.accountRetriever.GetAccount(ctx, address)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get pubkey for signer %s: %w", address, err)
 		}
 		acc.PubKey = pk
+		acc.AccountNumber = accNum
 		if err := s.store.SetAccount(address, acc); err != nil {
 			return nil, fmt.Errorf("failed to set account for signer %s: %w", address, err)
 		}
@@ -199,9 +226,9 @@ func totalBlobSize(blobs [][]byte) []uint32 {
 	return size
 }
 
-func EstimateMinGas(blobs [][]byte) uint64 {
-	gas := blobtypes.GasToConsume(totalBlobSize(blobs), appconsts.DefaultGasPerBlobByte)
-	gas += blobtypes.BytesPerBlobInfo * auth.DefaultTxSizeCostPerByte * uint64(len(blobs))
+func EstimateMinGas(blobSizes []uint32) uint64 {
+	gas := blobtypes.GasToConsume(blobSizes, appconsts.DefaultGasPerBlobByte)
+	gas += blobtypes.BytesPerBlobInfo * auth.DefaultTxSizeCostPerByte * uint64(len(blobSizes))
 	return gas
 }
 

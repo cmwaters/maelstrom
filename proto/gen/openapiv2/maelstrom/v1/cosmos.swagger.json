@@ -1,0 +1,102 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "maelstrom/v1/cosmos.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Cosmos"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/cosmos/tx/v1beta1/txs": {
+      "post": {
+        "summary": "BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility\nfor clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting\nBlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate\nthem with others, eventually submitting them to the main chain",
+        "operationId": "Cosmos_BroadcastTx",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Cosmos"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "googlerpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "v1BroadcastTxRequest": {
+      "type": "object",
+      "properties": {
+        "txBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "tx_bytes is the raw transaction."
+        }
+      }
+    },
+    "v1BroadcastTxResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    }
+  }
+}

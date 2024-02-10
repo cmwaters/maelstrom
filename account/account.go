@@ -13,14 +13,16 @@ import (
 )
 
 type Account struct {
-	PubKey  crypto.PubKey
-	Balance uint64 // balance in utia
+	PubKey        crypto.PubKey
+	Balance       uint64 // balance in utia
+	AccountNumber uint64
 }
 
-func NewAccount(pubKey crypto.PubKey, balance uint64) *Account {
+func NewAccount(pubKey crypto.PubKey, balance, accountNumber uint64) *Account {
 	return &Account{
-		PubKey:  pubKey,
-		Balance: balance,
+		PubKey:        pubKey,
+		Balance:       balance,
+		AccountNumber: accountNumber,
 	}
 }
 
@@ -49,8 +51,9 @@ func NewAccountFromBytes(bz []byte) (*Account, error) {
 	}
 
 	return &Account{
-		PubKey:  pk,
-		Balance: acc.Balance,
+		PubKey:        pk,
+		Balance:       acc.Balance,
+		AccountNumber: acc.AccountNumber,
 	}, nil
 }
 
@@ -73,8 +76,13 @@ func (a *Account) Bytes() ([]byte, error) {
 	}
 
 	return proto.Marshal(&maelstrom.Account{
-		PubKey:     a.PubKey.Bytes(),
-		Balance:    a.Balance,
-		PubKeyType: pkType,
+		PubKey:        a.PubKey.Bytes(),
+		Balance:       a.Balance,
+		PubKeyType:    pkType,
+		AccountNumber: a.AccountNumber,
 	})
+}
+
+func (a *Account) IsSet() bool {
+	return a.PubKey != nil
 }

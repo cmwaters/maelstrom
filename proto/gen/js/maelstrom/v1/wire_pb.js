@@ -156,7 +156,8 @@ proto.maelstrom.v1.Account.toObject = function(includeInstance, msg) {
   var f, obj = {
     balance: jspb.Message.getFieldWithDefault(msg, 1, 0),
     pubKey: msg.getPubKey_asB64(),
-    pubKeyType: jspb.Message.getFieldWithDefault(msg, 3, 0)
+    pubKeyType: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    accountNumber: jspb.Message.getFieldWithDefault(msg, 4, 0)
   };
 
   if (includeInstance) {
@@ -205,6 +206,10 @@ proto.maelstrom.v1.Account.deserializeBinaryFromReader = function(msg, reader) {
       var value = /** @type {!proto.maelstrom.v1.Account.PubKeyType} */ (reader.readEnum());
       msg.setPubKeyType(value);
       break;
+    case 4:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setAccountNumber(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -252,6 +257,13 @@ proto.maelstrom.v1.Account.serializeBinaryToWriter = function(message, writer) {
   if (f !== 0.0) {
     writer.writeEnum(
       3,
+      f
+    );
+  }
+  f = message.getAccountNumber();
+  if (f !== 0) {
+    writer.writeUint64(
+      4,
       f
     );
   }
@@ -343,6 +355,24 @@ proto.maelstrom.v1.Account.prototype.getPubKeyType = function() {
  */
 proto.maelstrom.v1.Account.prototype.setPubKeyType = function(value) {
   return jspb.Message.setProto3EnumField(this, 3, value);
+};
+
+
+/**
+ * optional uint64 account_number = 4;
+ * @return {number}
+ */
+proto.maelstrom.v1.Account.prototype.getAccountNumber = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.maelstrom.v1.Account} returns this
+ */
+proto.maelstrom.v1.Account.prototype.setAccountNumber = function(value) {
+  return jspb.Message.setProto3IntField(this, 4, value);
 };
 
 

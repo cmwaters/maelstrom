@@ -23,21 +23,21 @@ func NewQuerier(conn *grpc.ClientConn) *Querier {
 	}
 }
 
-func (q *Querier) GetPubKey(ctx context.Context, address string) (cryptotypes.PubKey, error) {
+func (q *Querier) GetAccount(ctx context.Context, address string) (cryptotypes.PubKey, uint64, error) {
 	client := auth.NewQueryClient(q.conn)
 	timeOutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	resp, err := client.Account(timeOutCtx, &auth.QueryAccountRequest{Address: address})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var acc auth.AccountI
 	err = q.cdc.InterfaceRegistry.UnpackAny(resp.Account, &acc)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return acc.GetPubKey(), nil
+	return acc.GetPubKey(), acc.GetAccountNumber(), nil
 }

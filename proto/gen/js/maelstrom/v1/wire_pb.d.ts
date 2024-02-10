@@ -14,6 +14,9 @@ export class Account extends jspb.Message {
   getPubKeyType(): Account.PubKeyType;
   setPubKeyType(value: Account.PubKeyType): Account;
 
+  getAccountNumber(): number;
+  setAccountNumber(value: number): Account;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Account.AsObject;
   static toObject(includeInstance: boolean, msg: Account): Account.AsObject;
@@ -27,6 +30,7 @@ export namespace Account {
     balance: number,
     pubKey: Uint8Array | string,
     pubKeyType: Account.PubKeyType,
+    accountNumber: number,
   }
 
   export enum PubKeyType { 

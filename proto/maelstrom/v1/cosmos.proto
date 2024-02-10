@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package maelstrom.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/cmwaters/maelstrom";
+
+service Cosmos {
+    // BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
+    // for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
+    // BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
+    // them with others, eventually submitting them to the main chain
+    rpc BroadcastTx(BroadcastTxRequest) returns (BroadcastTxResponse) {
+        option (google.api.http) = {
+            post: "/cosmos/tx/v1beta1/txs"
+            body: "*"
+        };
+    }
+}
+
+message BroadcastTxRequest {
+	// tx_bytes is the raw transaction.
+	bytes tx_bytes = 1;
+	reserved 2;  // broadcast mode (we don't really care about it
+}
+
+message BroadcastTxResponse {
+    reserved 1; // tx response
+    uint64 id = 2;
+}

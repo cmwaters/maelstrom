@@ -23,7 +23,7 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	address := pubKey.Address().String()
 
 	// Create a new account
-	account := account.NewAccount(pubKey, 100)
+	account := account.NewAccount(pubKey, 100, 1)
 	require.NoError(t, err)
 
 	// Set the account in the store

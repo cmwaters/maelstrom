@@ -16,8 +16,8 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	rpc "github.com/tendermint/tendermint/rpc/client/http"
 	"google.golang.org/grpc"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
 
 func (s *Server) Serve(ctx context.Context) error {
@@ -51,7 +51,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		// Enable CORs
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		return nil
 	}))
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}

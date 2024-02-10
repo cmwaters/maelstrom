@@ -1,0 +1,11 @@
+{
+  "name": "maelstrom-client",
+  "version": "1.0.0",
+  "description": "browser based client implementation for maelstrom",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "",
+  "license": "ISC"
+}
