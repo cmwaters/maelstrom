@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -44,8 +43,8 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		GRPCServerAddress:   "0.0.0.0:8080",
-		GRPCGatewayAddress:  "0.0.0.0:8081",
+		GRPCServerAddress:   "0.0.0.0:5050",
+		GRPCGatewayAddress:  "0.0.0.0:5051",
 		CelestiaRPCAddress:  "http://127.0.0.1:26657",
 		CelestiaGRPCAddress: "localhost:9090",
 		KeyringName:         DefaultKeyName,
@@ -172,7 +171,6 @@ func (cfg *Config) Keyring() (keyring.Keyring, error) {
 		return cfg.keyring, nil
 	}
 
-	fmt.Println(cfg.KeyringDir())
 	kr, err := keyring.New(app.Name, keyring.BackendTest, cfg.KeyringDir(), nil, cdc.Codec)
 	if err != nil {
 		return nil, err
