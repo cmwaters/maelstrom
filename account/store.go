@@ -38,7 +38,7 @@ func NewStore(db *badger.DB, accountPubKey crypto.PubKey) (*Store, error) {
 				// Check that the existing pub key matches the provided one
 				return item.Value(func(val []byte) error {
 					if !bytes.Equal(val, accountPubKey.Bytes()) {
-						return fmt.Errorf("account prefix already exists with different public key")
+						return fmt.Errorf("account prefix already exists with different public key: existing %X, new %X", val, accountPubKey.Bytes())
 					}
 					return nil
 				})

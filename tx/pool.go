@@ -140,9 +140,11 @@ func (p *Pool) Update(height uint64) (int, error) {
 }
 
 func (p *Pool) getBlobs(ids []BlobID) []*Blob {
-	blobs := make([]*Blob, len(ids))
-	for i, id := range ids {
-		blobs[i] = p.blobs[id]
+	blobs := make([]*Blob, 0, len(ids))
+	for _, id := range ids {
+		if blob, exists := p.blobs[id]; exists {
+			blobs = append(blobs, blob)
+		}
 	}
 	return blobs
 }

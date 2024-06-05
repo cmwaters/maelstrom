@@ -73,7 +73,6 @@ Below is a rough schematic of the system architecture. Each maelstrom instance i
 
 The reader safely and sequentially processes every transaction ensure none is ever missed. It is used for process deposits but also for confirming successful blob submissions and withdrawals. At the end of processing each height, the reader also updates the pool which will timeout any blobs or transactions that have expired.
 
-
 ## Getting Started
 
 Maelstrom is currently not yet deployed however it can be run locally.

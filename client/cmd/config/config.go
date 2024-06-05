@@ -12,6 +12,7 @@ import (
 	"github.com/celestiaorg/celestia-app/pkg/user"
 	client "github.com/cmwaters/maelstrom/client/go"
 	"github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
+	"github.com/cmwaters/maelstrom/server"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc"
@@ -74,11 +75,12 @@ func (cfg *Config) Address() (sdk.AccAddress, error) {
 }
 
 func Default() *Config {
+	serverCfg := server.DefaultConfig()
 	return &Config{
-		MaelstromServerAddress: "localhost:8080",
-		CelestiaGRPCAddress:    "localhost:9090",
-		KeyringDir:             "keys",
-		KeyName:                "maelstrom",
+		MaelstromServerAddress: serverCfg.GRPCServerAddress,
+		CelestiaGRPCAddress:    serverCfg.CelestiaGRPCAddress,
+		KeyringDir:             server.KeyringDirName,
+		KeyName:                server.DefaultKeyName,
 	}
 }
 

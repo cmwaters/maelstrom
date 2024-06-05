@@ -218,6 +218,11 @@ func (s *Server) getAccount(ctx context.Context, address string) (*account.Accou
 	return acc, nil
 }
 
+// SetLogger sets the logger for the server. Must be called prior to starting the server
+func (s *Server) SetLogger(log zerolog.Logger) {
+	s.log = log
+}
+
 func totalBlobSize(blobs [][]byte) []uint32 {
 	size := make([]uint32, len(blobs))
 	for i, b := range blobs {
