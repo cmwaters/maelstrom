@@ -20,43 +20,46 @@ type Store struct {
 	height uint64
 }
 
-func NewStore(db *badger.DB, accountPubKey crypto.PubKey) (*Store, error) {
+func NewStore(db *badger.DB, accountPubKey crypto.PubKey, startingHeight uint64) (*Store, error) {
 	// assert that the account key matches the one persisted to disk
 	// If none currently exists, persist the provided one
-	if accountPubKey != nil {
-		if accountPubKey.Type() != "secp256k1" {
-			return nil, fmt.Errorf("only secp256k1 keys are supported")
-		}
-		err := db.Update(func(txn *badger.Txn) error {
-			item, err := txn.Get(MyAccountKey())
-			if errors.Is(err, badger.ErrKeyNotFound) {
-				// Create the account prefix
-				return txn.Set(MyAccountKey(), accountPubKey.Bytes())
-			} else if err != nil {
-				return err
-			} else {
-				// Check that the existing pub key matches the provided one
-				return item.Value(func(val []byte) error {
-					if !bytes.Equal(val, accountPubKey.Bytes()) {
-						return fmt.Errorf("account prefix already exists with different public key: existing %X, new %X", val, accountPubKey.Bytes())
-					}
-					return nil
-				})
-			}
-		})
-		if err != nil {
-			return nil, err
-		}
+	if accountPubKey == nil {
+		return nil, fmt.Errorf("no account pub key provided")
 	}
-	// set the height if it is unset
-	var height uint64
+	if accountPubKey.Type() != "secp256k1" {
+		return nil, fmt.Errorf("only secp256k1 keys are supported")
+	}
 	err := db.Update(func(txn *badger.Txn) error {
+		item, err := txn.Get(MyAccountKey())
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			// Create the account prefix
+			return txn.Set(MyAccountKey(), accountPubKey.Bytes())
+		} else if err != nil {
+			return err
+		} else {
+			// Check that the existing pub key matches the provided one
+			return item.Value(func(val []byte) error {
+				if !bytes.Equal(val, accountPubKey.Bytes()) {
+					return fmt.Errorf("account prefix already exists with different public key: existing %X, new %X", val, accountPubKey.Bytes())
+				}
+				return nil
+			})
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// set the height to startingHeight if it is unset
+	var height uint64
+	err = db.Update(func(txn *badger.Txn) error {
 		item, err := txn.Get(HeightKey())
 		if err != nil {
 			if errors.Is(err, badger.ErrKeyNotFound) {
 				// If no height exists, set the height key to 0
 				heightBytes := make([]byte, 8)
-				binary.BigEndian.PutUint64(heightBytes, height)
+				binary.BigEndian.PutUint64(heightBytes, startingHeight)
+				height = startingHeight
 				return txn.Set(HeightKey(), heightBytes)
 			}
 			return err
