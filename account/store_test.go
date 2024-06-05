@@ -15,7 +15,7 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	ownerPrivKey := secp256k1.GenPrivKey()
 	db, err := badger.Open(badger.DefaultOptions(t.TempDir()))
 	require.NoError(t, err)
-	store, err := account.NewStore(db, ownerPrivKey.PubKey())
+	store, err := account.NewStore(db, ownerPrivKey.PubKey(), 0)
 	require.NoError(t, err)
 
 	privKey := secp256k1.GenPrivKey()
@@ -38,4 +38,26 @@ func TestCreateAndRetrieveAccount(t *testing.T) {
 	if !reflect.DeepEqual(account, retrievedAccount) {
 		t.Fatalf("Retrieved account does not match original account")
 	}
+}
+
+func TestHeights(t *testing.T) {
+	ownerPrivKey := secp256k1.GenPrivKey()
+	db, err := badger.Open(badger.DefaultOptions(t.TempDir()))
+	require.NoError(t, err)
+	store, err := account.NewStore(db, ownerPrivKey.PubKey(), 0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), store.GetHeight())
+
+	// setting the start height on an already initialized store should
+	// do nothing
+	store, err = account.NewStore(db, ownerPrivKey.PubKey(), 100)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), store.GetHeight())
+
+	// with a new db, the starting height should work
+	newDb, err := badger.Open(badger.DefaultOptions(t.TempDir()))
+	require.NoError(t, err)
+	store, err = account.NewStore(newDb, ownerPrivKey.PubKey(), 100)
+	require.NoError(t, err)
+	require.Equal(t, uint64(100), store.GetHeight())
 }

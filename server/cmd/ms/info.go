@@ -34,14 +34,21 @@ var infoCmd = &cobra.Command{
 				return err
 			}
 
-			store, err := account.NewStore(db, nil)
+			record, err := config.GetRecord()
 			if err != nil {
 				return err
 			}
-			pk, err := store.GetOwnerPubKey()
+
+			pk, err := record.GetPubKey()
 			if err != nil {
 				return err
 			}
+
+			store, err := account.NewStore(db, pk, config.StartHeight)
+			if err != nil {
+				return err
+			}
+
 			height := store.GetHeight()
 			fmt.Printf("Address: %s\nHeight: %d\n", sdk.AccAddress(pk.Address()).String(), height)
 			return nil

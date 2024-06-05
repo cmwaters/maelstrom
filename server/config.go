@@ -39,6 +39,7 @@ type Config struct {
 	keyring             keyring.Keyring
 	KeyringName         string        `toml:"keyring_name"`
 	TimeoutCommit       time.Duration `toml:"timeout_commit"`
+	StartHeight         uint64        `toml:"start_height"`
 }
 
 func DefaultConfig() *Config {
@@ -49,6 +50,7 @@ func DefaultConfig() *Config {
 		CelestiaGRPCAddress: "localhost:9090",
 		KeyringName:         DefaultKeyName,
 		TimeoutCommit:       appconsts.TimeoutCommit,
+		StartHeight:         0,
 	}
 }
 
@@ -123,7 +125,7 @@ func (cfg *Config) NewServer(ctx context.Context) (*Server, error) {
 		return nil, err
 	}
 
-	accountStore, err := account.NewStore(db, pk)
+	accountStore, err := account.NewStore(db, pk, cfg.StartHeight)
 	if err != nil {
 		return nil, err
 	}
@@ -177,4 +179,12 @@ func (cfg *Config) Keyring() (keyring.Keyring, error) {
 	}
 	cfg.keyring = kr
 	return kr, nil
+}
+
+func (cfg *Config) GetRecord() (*keyring.Record, error) {
+	kr, err := cfg.Keyring()
+	if err != nil {
+		return nil, err
+	}
+	return kr.Key(cfg.KeyringName)
 }
