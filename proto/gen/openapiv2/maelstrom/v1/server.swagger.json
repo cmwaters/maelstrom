@@ -258,7 +258,11 @@
     "v1BalanceResponse": {
       "type": "object",
       "properties": {
-        "balance": {
+        "maelstromBalance": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "celestiaBalance": {
           "type": "string",
           "format": "uint64"
         }

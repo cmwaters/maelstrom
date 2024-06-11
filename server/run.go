@@ -128,11 +128,11 @@ func (s *Server) Serve(ctx context.Context) error {
 
 func (s *Server) waitUntilSynced(ctx context.Context, client *rpc.HTTP) error {
 	var (
-		networkHeight uint64
-		storeHeight          = s.store.GetHeight()
-		ticker               = time.NewTicker(time.Second)
-		tolerance     uint64 = 5 // we consider synced as within 5 heights
-		lastTimestamp        = time.Now()
+		networkHeight int64
+		storeHeight         = int64(s.store.GetHeight())
+		ticker              = time.NewTicker(time.Second)
+		tolerance     int64 = 5 // we consider synced as within 5 heights
+		lastTimestamp       = time.Now()
 	)
 	for {
 		if networkHeight == 0 || networkHeight-tolerance < storeHeight {
@@ -140,8 +140,7 @@ func (s *Server) waitUntilSynced(ctx context.Context, client *rpc.HTTP) error {
 			if err != nil {
 				return err
 			}
-			networkHeight = uint64(status.SyncInfo.LatestBlockHeight)
-			fmt.Println("networkHeight", networkHeight, "storeHeight", storeHeight)
+			networkHeight = status.SyncInfo.LatestBlockHeight
 			if networkHeight-tolerance < storeHeight {
 				// we are synced!
 				return nil
@@ -153,7 +152,7 @@ func (s *Server) waitUntilSynced(ctx context.Context, client *rpc.HTTP) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			newStoreHeight := s.store.GetHeight()
+			newStoreHeight := int64(s.store.GetHeight())
 			// check that we are still making progress
 			if newStoreHeight == storeHeight {
 				if time.Since(lastTimestamp) > 30*time.Second {

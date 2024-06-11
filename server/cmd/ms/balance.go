@@ -30,7 +30,7 @@ var balanceCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("could not get balance: %v", err)
 		}
-		fmt.Printf("Balance: %d\n", r.Balance)
+		fmt.Printf("Balance: %d\n", r.MaelstromBalance)
 		return nil
 	},
 }

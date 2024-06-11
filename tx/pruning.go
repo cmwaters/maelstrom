@@ -1,8 +1,10 @@
 package tx
 
 // TODO: make configurable
-const deepPruneFrequency = 1_000
-const expiredTxPrunePeriod = 10_000 // roughly every 2 days given 15 second block time
+const (
+	deepPruneFrequency   = 1_000
+	expiredTxPrunePeriod = 10_000 // roughly every 2 days given 15 second block time
+)
 
 func (p *Pool) prune(height uint64) (int, error) {
 	prunedTxs, err := p.prunePending(height)

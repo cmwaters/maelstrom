@@ -18,6 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
+	"github.com/dgraph-io/badger"
 	"github.com/rs/zerolog"
 )
 
@@ -35,7 +36,7 @@ type Server struct {
 	accountRetriever *account.Querier
 	feeMonitor       *node.FeeMonitor
 	maelstrom.UnimplementedBlobServer
-	maelstrom.UnimplementedCosmosServer
+	maelstrom.UnimplementedCelestiaServer
 }
 
 func New(
@@ -118,12 +119,24 @@ func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*m
 		return nil, ErrServerNotReady
 	}
 
-	acc, err := s.store.GetAccount(req.Address)
+	celestiaBalance, err := s.accountRetriever.GetBalance(ctx, req.Address)
 	if err != nil {
 		return nil, err
 	}
+
+	acc, err := s.store.GetAccount(req.Address)
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return &maelstrom.BalanceResponse{
+				MaelstromBalance: 0,
+				CelestiaBalance:  celestiaBalance,
+			}, nil
+		}
+		return nil, err
+	}
 	return &maelstrom.BalanceResponse{
-		Balance: acc.Balance,
+		MaelstromBalance: acc.Balance,
+		CelestiaBalance:  celestiaBalance,
 	}, nil
 }
 
@@ -157,7 +170,7 @@ func (s *Server) Withdraw(ctx context.Context, req *maelstrom.WithdrawRequest) (
 	}
 
 	now := uint64(time.Now().UTC().Unix())
-	var tolerance = uint64(10) // 10 seconds
+	tolerance := uint64(10) // 10 seconds
 	if req.Timestamp < now-tolerance || req.Timestamp > now+tolerance {
 		return nil, fmt.Errorf("invalid timestamp %d, must be within %d seconds of current time", req.Timestamp, tolerance)
 	}

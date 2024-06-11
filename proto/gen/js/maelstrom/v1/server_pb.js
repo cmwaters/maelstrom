@@ -1929,7 +1929,8 @@ proto.maelstrom.v1.BalanceResponse.prototype.toObject = function(opt_includeInst
  */
 proto.maelstrom.v1.BalanceResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
-    balance: jspb.Message.getFieldWithDefault(msg, 1, 0)
+    maelstromBalance: jspb.Message.getFieldWithDefault(msg, 1, 0),
+    celestiaBalance: jspb.Message.getFieldWithDefault(msg, 2, 0)
   };
 
   if (includeInstance) {
@@ -1968,7 +1969,11 @@ proto.maelstrom.v1.BalanceResponse.deserializeBinaryFromReader = function(msg, r
     switch (field) {
     case 1:
       var value = /** @type {number} */ (reader.readUint64());
-      msg.setBalance(value);
+      msg.setMaelstromBalance(value);
+      break;
+    case 2:
+      var value = /** @type {number} */ (reader.readUint64());
+      msg.setCelestiaBalance(value);
       break;
     default:
       reader.skipField();
@@ -1999,10 +2004,17 @@ proto.maelstrom.v1.BalanceResponse.prototype.serializeBinary = function() {
  */
 proto.maelstrom.v1.BalanceResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getBalance();
+  f = message.getMaelstromBalance();
   if (f !== 0) {
     writer.writeUint64(
       1,
+      f
+    );
+  }
+  f = message.getCelestiaBalance();
+  if (f !== 0) {
+    writer.writeUint64(
+      2,
       f
     );
   }
@@ -2010,10 +2022,10 @@ proto.maelstrom.v1.BalanceResponse.serializeBinaryToWriter = function(message, w
 
 
 /**
- * optional uint64 balance = 1;
+ * optional uint64 maelstrom_balance = 1;
  * @return {number}
  */
-proto.maelstrom.v1.BalanceResponse.prototype.getBalance = function() {
+proto.maelstrom.v1.BalanceResponse.prototype.getMaelstromBalance = function() {
   return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 1, 0));
 };
 
@@ -2022,8 +2034,26 @@ proto.maelstrom.v1.BalanceResponse.prototype.getBalance = function() {
  * @param {number} value
  * @return {!proto.maelstrom.v1.BalanceResponse} returns this
  */
-proto.maelstrom.v1.BalanceResponse.prototype.setBalance = function(value) {
+proto.maelstrom.v1.BalanceResponse.prototype.setMaelstromBalance = function(value) {
   return jspb.Message.setProto3IntField(this, 1, value);
+};
+
+
+/**
+ * optional uint64 celestia_balance = 2;
+ * @return {number}
+ */
+proto.maelstrom.v1.BalanceResponse.prototype.getCelestiaBalance = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 2, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.maelstrom.v1.BalanceResponse} returns this
+ */
+proto.maelstrom.v1.BalanceResponse.prototype.setCelestiaBalance = function(value) {
+  return jspb.Message.setProto3IntField(this, 2, value);
 };
 
 

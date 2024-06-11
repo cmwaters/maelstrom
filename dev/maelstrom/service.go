@@ -2,7 +2,6 @@ package maelstrom
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -94,7 +93,6 @@ func (s *Service) Start(ctx context.Context, dir string, _ *types.GenesisDoc, in
 	go func() {
 		defer close(s.doneCh)
 		s.errCh <- s.server.Serve(s.ctx)
-		fmt.Println("server done")
 	}()
 
 	// listen for the next five seconds for any errors
@@ -124,13 +122,10 @@ func (s *Service) Stop(ctx context.Context) error {
 	if s.cancel == nil {
 		return nil
 	}
-	fmt.Println("cancelling context")
 	s.cancel()
 
-	fmt.Println("waiting for service to shutdown")
 	select {
 	case <-s.doneCh:
-		fmt.Println("done")
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

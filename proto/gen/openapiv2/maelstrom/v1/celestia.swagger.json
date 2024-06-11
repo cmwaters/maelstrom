@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "maelstrom/v1/cosmos.proto",
+    "title": "maelstrom/v1/celestia.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "Cosmos"
+      "name": "Celestia"
     }
   ],
   "consumes": [
@@ -19,7 +19,7 @@
     "/cosmos/tx/v1beta1/txs": {
       "post": {
         "summary": "BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility\nfor clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting\nBlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate\nthem with others, eventually submitting them to the main chain",
-        "operationId": "Cosmos_BroadcastTx",
+        "operationId": "Celestia_BroadcastTx",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -45,7 +45,7 @@
           }
         ],
         "tags": [
-          "Cosmos"
+          "Celestia"
         ]
       }
     }

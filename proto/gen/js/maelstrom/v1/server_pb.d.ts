@@ -214,8 +214,11 @@ export namespace BalanceRequest {
 }
 
 export class BalanceResponse extends jspb.Message {
-  getBalance(): number;
-  setBalance(value: number): BalanceResponse;
+  getMaelstromBalance(): number;
+  setMaelstromBalance(value: number): BalanceResponse;
+
+  getCelestiaBalance(): number;
+  setCelestiaBalance(value: number): BalanceResponse;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): BalanceResponse.AsObject;
@@ -227,7 +230,8 @@ export class BalanceResponse extends jspb.Message {
 
 export namespace BalanceResponse {
   export type AsObject = {
-    balance: number,
+    maelstromBalance: number,
+    celestiaBalance: number,
   }
 }
 

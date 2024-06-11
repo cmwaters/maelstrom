@@ -105,3 +105,7 @@ Blob committed (tx hash 11BF260162A52B8EA769CDB956F0676462A7292CA09213534C057B68
 ```
 
 Congrats! you've submitted a blob. If you want you can use the tx hash to query the transaction and confirm that the blob is there.
+
+## Contributors
+
+Contributions are welcome. Feel free to open an issue first and then get started with your PR.
