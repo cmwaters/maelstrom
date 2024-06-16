@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --config webpack.config.js"
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --config webpack.config.js --watch"
   },
   "repository": {
     "type": "git",
@@ -14,6 +15,7 @@
   "description": "",
   "dependencies": {
     "buffer": "^6.0.3",
+    "grpc-web": "^1.5.0",
     "maelstrom-client": "file:../client/js"
   },
   "devDependencies": {
@@ -21,8 +23,8 @@
     "@babel/preset-env": "^7.24.7",
     "@webpack-cli/init": "^1.1.3",
     "babel-loader": "^9.1.3",
-    "react-app-rewired": "^2.2.1",
     "os-browserify": "^0.3.0",
+    "react-app-rewired": "^2.2.1",
     "stream-http": "^3.2.0"
   },
   "browserslist": {

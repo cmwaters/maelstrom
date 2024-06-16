@@ -156,23 +156,21 @@ export class Client {
         signatures: [Buffer.from(signed.signature.signature, "base64")],
     }).finish()
 
-    console.log("tx", tx)
-
     try {
         const response = await fetch(`${this.baseUrl}/cosmos/tx/v1beta1/txs`, {
             method: 'POST',
             headers: {
-            'Content-Type': 'application/json'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 tx_bytes: tx
             })
         });
 
+        console.log(response)
         if (!response.ok) {
-            throw new Error(`Error: ${response.statusText}`);
+            throw new Error('Failed to submit transaction');
         }
-
         const result = await response.json();
         console.log('Transaction submitted successfully:', result);
     } catch (error) {

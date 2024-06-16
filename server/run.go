@@ -48,15 +48,18 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	grpcServer := grpc.NewServer()
 	maelstrom.RegisterMaelstromServer(grpcServer, s)
-	grpcGatewayMux := runtime.NewServeMux(runtime.WithForwardResponseOption(func(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
+	grpcGatewayMux := runtime.NewServeMux(runtime.WithForwardResponseOption(func(ctx context.Context, w http.
+		ResponseWriter, resp proto.Message) error {
 		// Enable CORs
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, application/json")
+		w.WriteHeader(http.StatusOK)
 		return nil
 	}))
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	if err := maelstrom.RegisterMaelstromHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
+	if err := maelstrom.RegisterMaelstromHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress,
+		opts); err != nil {
 		return fmt.Errorf("error registering grpc endpoint: %w", err)
 	}
 

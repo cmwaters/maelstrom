@@ -18,24 +18,29 @@ import (
 
 // BroadcastTx broadcast transaction.
 func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequest) (*maelstrom.BroadcastTxResponse, error) {
+	s.log.Info().Msg("recieved broadcast tx request")
 	if !s.isConnected.Load() {
 		return nil, ErrServerNotReady
 	}
 
 	blobTx, isBlobTx := types.UnmarshalBlobTx(req.TxBytes)
 	if !isBlobTx {
+		s.log.Info().Msg("recieved non blob tx, forwarding to consensus node")
 		// for non blob tx's the server proxies the request to the connected consensus node
 		resp, err := sdktx.NewServiceClient(s.conn).BroadcastTx(ctx, &sdktx.BroadcastTxRequest{
 			TxBytes: req.TxBytes,
 			Mode:    sdktx.BroadcastMode_BROADCAST_MODE_SYNC,
 		})
 		if err != nil {
+			s.log.Error().Err(err).Msg("error broadcasting tx to consensus node")
 			return nil, err
 		}
 		return &maelstrom.BroadcastTxResponse{
 			TxResponse: resp.TxResponse,
 		}, nil
 	}
+
+	s.log.Info().Msg("recieved blob tx, validating")
 
 	rawTx, err := cdc.TxConfig.TxDecoder()(blobTx.Tx)
 	if err != nil {
@@ -54,14 +59,17 @@ func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequ
 
 	acc, err := s.getAccount(ctx, pfb.Signer)
 	if err != nil {
+		s.log.Error().Err(err).Msg("error getting account")
 		return nil, fmt.Errorf("getting account: %w", err)
 	}
 
 	if err := s.validatePFBSignature(tx, acc); err != nil {
+		s.log.Error().Err(err).Msg("error validating signature")
 		return nil, err
 	}
 
 	if err := blob.ValidateBlobs(blobTx.Blobs...); err != nil {
+		s.log.Error().Err(err).Msg("error validating blobs")
 		return nil, fmt.Errorf("invalid blobs: %w", err)
 	}
 
@@ -75,11 +83,13 @@ func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequ
 	fee := tx.GetFee().AmountOf(appconsts.BondDenom).Uint64()
 	requiredPrice := uint64(float64(gas) * s.feeMonitor.GasPrice())
 	if fee < requiredPrice {
+		s.log.Error().Msgf("minimum fee of %dutia required for this transaction", requiredPrice)
 		return nil, fmt.Errorf("minimum fee of %dutia required for this transaction", requiredPrice)
 	}
 
 	id, err := s.pool.Add(pfb.Signer, namespace, getBlobs(blobTx.Blobs), fee, gas, &maelstrom.Options{}, account.UpdateBalanceFn(pfb.Signer, fee, false))
 	if err != nil {
+		s.log.Error().Err(err).Msg("error adding to pool")
 		return nil, fmt.Errorf("adding to pool: %w", err)
 	}
 

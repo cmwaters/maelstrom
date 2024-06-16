@@ -96,6 +96,7 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 
 	msg := SubmitRequestSignOverData(req.Namespace, req.Blobs)
 	if !acc.PubKey.VerifySignature(msg, req.Signature) {
+		s.log.Error().Msgf("invalid signature for signer %s", req.Signer)
 		return nil, fmt.Errorf("invalid signature for signer %s", req.Signer)
 	}
 
@@ -105,8 +106,10 @@ func (s *Server) Submit(ctx context.Context, req *maelstrom.SubmitRequest) (*mae
 
 	id, err := s.pool.Add(req.Signer, req.Namespace[1:], req.Blobs, req.Fee, gas, req.Options, account.UpdateBalanceFn(req.Signer, req.Fee, false))
 	if err != nil {
+		s.log.Error().Err(err).Msg("error adding to pool")
 		return nil, fmt.Errorf("adding to pool: %w", err)
 	}
+	s.log.Info().Msgf("added tx to pool, id: %d", id)
 
 	return &maelstrom.SubmitResponse{Id: uint64(id)}, nil
 }

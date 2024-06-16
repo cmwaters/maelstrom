@@ -27,6 +27,8 @@ module.exports = {
   resolve: {
       fallback: {
           "buffer": require.resolve("buffer/")
-      }
+      },
+      extensions: ['.ts', '.js'],
+      modules: ['node_modules']
   }
 };

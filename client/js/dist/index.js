@@ -158,7 +158,6 @@ class Client {
                 authInfoBytes: signed.signed.authInfoBytes,
                 signatures: [buffer_1.Buffer.from(signed.signature.signature, "base64")],
             }).finish();
-            console.log("tx", tx);
             try {
                 const response = yield fetch(`${this.baseUrl}/cosmos/tx/v1beta1/txs`, {
                     method: 'POST',
@@ -169,8 +168,9 @@ class Client {
                         tx_bytes: tx
                     })
                 });
+                console.log(response);
                 if (!response.ok) {
-                    throw new Error(`Error: ${response.statusText}`);
+                    throw new Error('Failed to submit transaction');
                 }
                 const result = yield response.json();
                 console.log('Transaction submitted successfully:', result);
