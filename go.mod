@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/celestiaorg/celestia-app v1.7.0
-	github.com/cmwaters/apollo v0.4.1
+	github.com/cmwaters/apollo v0.4.2
 	github.com/cosmos/cosmos-sdk v0.46.16
 	github.com/dgraph-io/badger v1.6.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0
