@@ -26,10 +26,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CelestiaClient interface {
-	// BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
-	// for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
-	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
-	// them with others, eventually submitting them to the main chain
 	BroadcastTx(ctx context.Context, in *BroadcastTxRequest, opts ...grpc.CallOption) (*BroadcastTxResponse, error)
 }
 
@@ -55,10 +51,6 @@ func (c *celestiaClient) BroadcastTx(ctx context.Context, in *BroadcastTxRequest
 // All implementations must embed UnimplementedCelestiaServer
 // for forward compatibility
 type CelestiaServer interface {
-	// BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
-	// for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
-	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
-	// them with others, eventually submitting them to the main chain
 	BroadcastTx(context.Context, *BroadcastTxRequest) (*BroadcastTxResponse, error)
 	mustEmbedUnimplementedCelestiaServer()
 }

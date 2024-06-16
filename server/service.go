@@ -60,9 +60,14 @@ func New(
 var ErrServerNotReady = errors.New("server not ready")
 
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
+	chainID := ""
+	if s.signer != nil {
+		chainID = s.signer.ChainID()
+	}
 	return &maelstrom.InfoResponse{
 		Address:     s.address.String(),
 		Height:      s.store.GetHeight(),
+		ChainId:     chainID,
 		MinGasPrice: s.feeMonitor.GasPrice(),
 	}, nil
 }

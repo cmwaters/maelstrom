@@ -7,24 +7,31 @@ import "google/api/annotations.proto";
 option go_package = "github.com/cmwaters/maelstrom";
 
 service Blob {
+    // Info
     rpc Info(InfoRequest) returns (InfoResponse) {
         option (google.api.http) = { get: "/v1/info" };
     }
+    // Submit
     rpc Submit(SubmitRequest) returns (SubmitResponse) {
         option (google.api.http) = { post: "/v1/submit", body: "*" };
     }
+    // Status
     rpc Status(StatusRequest) returns (StatusResponse) {
         option (google.api.http) = { get: "/v1/status/{id}" };
     }
+    // Balance
     rpc Balance(BalanceRequest) returns (BalanceResponse) {
         option (google.api.http) = { get: "/v1/balance/{address}" };
     }
+    // Cancel
     rpc Cancel(CancelRequest) returns (CancelResponse) {
         option (google.api.http) = { post: "/v1/cancel", body: "*" };
     }
+    // Withdraw
     rpc Withdraw(WithdrawRequest) returns (WithdrawResponse) {
         option (google.api.http) = { post: "/v1/withdraw", body: "*" };
     }
+    // Pending Withdrawal
     rpc PendingWithdrawal(PendingWithdrawalRequest) returns (PendingWithdrawalResponse) {
         option (google.api.http) = { get: "/v1/pending_withdrawal/{address}" };
     }
@@ -35,7 +42,8 @@ message InfoRequest {}
 message InfoResponse {
   string address = 1;
   uint64 height = 2;
-  double min_gas_price = 3;
+  string chain_id = 3;
+  double min_gas_price = 4;
 }
 
 message SubmitRequest {

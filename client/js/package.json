@@ -7,5 +7,14 @@
     "build": "tsc"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@keplr-wallet/types": "^0.12.103",
+    "long": "^5.2.3",
+    "protobufjs": "^7.3.2",
+    "typescript": "^5.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2"
+  }
 }

@@ -11,6 +11,7 @@ service Celestia {
     // for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
     // BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
     // them with others, eventually submitting them to the main chain
+
     rpc BroadcastTx(BroadcastTxRequest) returns (BroadcastTxResponse) {
         option (google.api.http) = {
             post: "/cosmos/tx/v1beta1/txs"

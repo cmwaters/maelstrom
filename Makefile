@@ -13,6 +13,7 @@ testnet:
 	@bash ./scripts/single-node.sh
 .PHONY: testnet
 
-serve-api:
-	@docker run -p 80:8080 -e SWAGGER_JSON=/maelstrom/proto/gen/openapiv2/maelstrom/v1/server.swagger.json -v /Users/callum/Developer/go/src/github.com/cmwaters/maelstrom:/maelstrom swaggerapi/swagger-ui
-.PHONY: serve-api
+update-api:
+	@bash ./scripts/openapi.sh
+.PHONY: update-api
+

@@ -58,6 +58,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	if err := maelstrom.RegisterBlobHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
 		return fmt.Errorf("error registering grpc endpoint: %w", err)
 	}
+
 	grpcGatewayServer := &http.Server{
 		Addr:    s.config.GRPCGatewayAddress,
 		Handler: grpcGatewayMux,
