@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maelstrom</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <button id="connectButton" onclick="connectWallet()">
+            Connect
+        </button>
+        <button href="https://docs.maelstrom.bot">Docs</button>
+    </div>
+    <div class="panel">
+        <h1>Maelstrom 🌊</h1>
+        <hr />
+        <div id="subtitle" style="font-size: 14px">
+            Celestia Blob Aggregator
+        </div>
+        <div id="portal">
+            <div class="topic">Account:</div>
+            <div id="user-address" class="card" style="color: white; cursor: pointer; margin: 10px;" onclick="navigator.clipboard.writeText(this.innerText)">loading...</div>
+            <div class="topic">Balance:</div>
+            <div class="container">
+                <div class="card">
+                    Celestia
+                    <h1 id="celestia-balance">0</h1>
+                    TIA
+                </div>
+                <div class="card">
+                    Maelstrom
+                    <h1 id="maelstrom-balance">0</h1>
+                    TIA
+                </div>
+            </div>
+            <div class="topic">Transfer:</div>
+            <div class="container">
+                <div class="card">
+                    <button style="font-size: 12px; margin-top: 20px;">To Celestia</button>
+                </div>  
+                <div class="card">
+                    <input type="number" placeholder="0" style="font-size: 26px; margin: 10px; width: 100px;">
+                    <div>TIA</div>
+                </div>
+                <div class="card">
+                    <button style="font-size: 12px; margin-top:20px;">To Maelstrom</button>
+                </div>
+            </div>
+            <div class="topic">Submit:</div>
+            <input type="text" placeholder="Namespace" style="width: 100%; text-align: left; margin: 10px">
+            <textarea placeholder="Data to be posted" style="width: 100%; text-align: left; margin: 10px"></textarea>
+            <button style="font-size: 12px;">Submit</button>
+            <div class="topic">Maelstrom Info:</div>
+            <div class="container" style="font-size: 12px;">
+                <div class="card">
+                    <div style="margin-bottom: 10px;">Height:</div>
+                    <div id="height">0</div>
+                </div>
+                <div class="card">
+                    <div style="margin-bottom: 10px;">ChainID:</div>
+                    <div>celestia</div>
+                </div>
+                <div class="card">
+                    <div style="margin-bottom: 10px;">Address:</div>
+                    <div id="maelstrom-address">1ar8m...rc00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="index.js"></script>
+</body>
+</html>

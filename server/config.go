@@ -26,9 +26,7 @@ const (
 	StoreName      = "maelstrom"
 )
 
-var (
-	cdc = encoding.MakeConfig(app.ModuleEncodingRegisters...)
-)
+var cdc = encoding.MakeConfig(app.ModuleEncodingRegisters...)
 
 type Config struct {
 	dir                 string

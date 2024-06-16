@@ -91,7 +91,7 @@ func (s *Store) DeleteCommittedTxs(ids []BlobID) error {
 }
 
 func (s *Store) GetMostRecentCommittedTxs(limit BlobID) (map[BlobID]*wire.BlobMeta, error) {
-	var txs = make(map[BlobID]*wire.BlobMeta)
+	txs := make(map[BlobID]*wire.BlobMeta)
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.Reverse = true

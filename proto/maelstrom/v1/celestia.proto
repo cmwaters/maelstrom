@@ -6,7 +6,7 @@ import "google/api/annotations.proto";
 
 option go_package = "github.com/cmwaters/maelstrom";
 
-service Cosmos {
+service Celestia {
     // BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
     // for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
     // BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
@@ -22,7 +22,7 @@ service Cosmos {
 message BroadcastTxRequest {
 	// tx_bytes is the raw transaction.
 	bytes tx_bytes = 1;
-	reserved 2;  // broadcast mode (we don't really care about it
+	reserved 2;  // broadcast mode (we ignore it for now)
 }
 
 message BroadcastTxResponse {

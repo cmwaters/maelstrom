@@ -85,7 +85,8 @@ message BalanceRequest {
 }
 
 message BalanceResponse {
-    uint64 balance = 1;
+    uint64 maelstrom_balance = 1;
+    uint64 celestia_balance = 2;
 }
 
 message CancelRequest {

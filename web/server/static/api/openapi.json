@@ -1,5 +1,5 @@
 {
-  "swagger": "2.0",
+  "openapi": "3.0.3",
   "info": {
     "title": "maelstrom/v1/server.proto",
     "version": "version not set"
@@ -7,13 +7,10 @@
   "tags": [
     {
       "name": "Blob"
+    },
+    {
+      "name": "Celestia"
     }
-  ],
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
   ],
   "paths": {
     "/v1/balance/{address}": {
@@ -224,209 +221,39 @@
           "Blob"
         ]
       }
-    }
-  },
-  "definitions": {
-    "googlerpcStatus": {
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "message": {
-          "type": "string"
-        },
-        "details": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/protobufAny"
-          }
-        }
-      }
     },
-    "protobufAny": {
-      "type": "object",
-      "properties": {
-        "@type": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": {}
-    },
-    "v1BalanceResponse": {
-      "type": "object",
-      "properties": {
-        "maelstromBalance": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "celestiaBalance": {
-          "type": "string",
-          "format": "uint64"
-        }
-      }
-    },
-    "v1CancelRequest": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "signature": {
-          "type": "string",
-          "format": "byte"
-        }
-      }
-    },
-    "v1CancelResponse": {
-      "type": "object"
-    },
-    "v1InfoResponse": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "height": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "minGasPrice": {
-          "type": "number",
-          "format": "double"
-        }
-      }
-    },
-    "v1Options": {
-      "type": "object",
-      "properties": {
-        "timeoutBlocks": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "compact": {
-          "type": "boolean"
-        },
-        "namespaceVersion": {
-          "type": "integer",
-          "format": "int64"
-        },
-        "shareVersion": {
-          "type": "integer",
-          "format": "int64"
-        }
-      }
-    },
-    "v1PendingWithdrawalResponse": {
-      "type": "object",
-      "properties": {
-        "amount": {
-          "type": "string",
-          "format": "uint64"
-        }
-      }
-    },
-    "v1StatusResponse": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "$ref": "#/definitions/v1StatusResponseStatus"
-        },
-        "insertHeight": {
-          "type": "string",
-          "format": "uint64",
-          "title": "If the tx is pending, these fields will be populated"
-        },
-        "expiryHeight": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "txHash": {
-          "type": "string",
-          "format": "byte",
-          "title": "if the tx is committed, thid field will be populated"
-        }
-      }
-    },
-    "v1StatusResponseStatus": {
-      "type": "string",
-      "enum": [
-        "UNKNOWN",
-        "PENDING",
-        "BROADCASTING",
-        "COMMITTED",
-        "EXPIRED"
-      ],
-      "default": "UNKNOWN"
-    },
-    "v1SubmitRequest": {
-      "type": "object",
-      "properties": {
-        "signer": {
-          "type": "string"
-        },
-        "namespace": {
-          "type": "string",
-          "format": "byte"
-        },
-        "blobs": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "byte"
+    "/cosmos/tx/v1beta1/txs": {
+      "post": {
+        "summary": "BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility\nfor clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting\nBlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate\nthem with others, eventually submitting them to the main chain",
+        "operationId": "Celestia_BroadcastTx",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
           }
         },
-        "fee": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "signature": {
-          "type": "string",
-          "format": "byte"
-        },
-        "options": {
-          "$ref": "#/definitions/v1Options"
-        }
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Celestia"
+        ]
       }
-    },
-    "v1SubmitResponse": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "format": "uint64"
-        }
-      }
-    },
-    "v1WithdrawRequest": {
-      "type": "object",
-      "properties": {
-        "signer": {
-          "type": "string"
-        },
-        "balance": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "amount": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "uint64"
-        },
-        "signature": {
-          "type": "string",
-          "format": "byte"
-        }
-      }
-    },
-    "v1WithdrawResponse": {
-      "type": "object"
     }
   }
 }
