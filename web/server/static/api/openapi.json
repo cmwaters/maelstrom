@@ -1,0 +1,259 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "maelstrom/v1/server.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Blob"
+    },
+    {
+      "name": "Celestia"
+    }
+  ],
+  "paths": {
+    "/v1/balance/{address}": {
+      "get": {
+        "operationId": "Blob_Balance",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BalanceResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/cancel": {
+      "post": {
+        "operationId": "Blob_Cancel",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CancelResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1CancelRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/info": {
+      "get": {
+        "operationId": "Blob_Info",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1InfoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/pending_withdrawal/{address}": {
+      "get": {
+        "operationId": "Blob_PendingWithdrawal",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1PendingWithdrawalResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/status/{id}": {
+      "get": {
+        "operationId": "Blob_Status",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/submit": {
+      "post": {
+        "operationId": "Blob_Submit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SubmitResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1SubmitRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/v1/withdraw": {
+      "post": {
+        "operationId": "Blob_Withdraw",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WithdrawResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1WithdrawRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Blob"
+        ]
+      }
+    },
+    "/cosmos/tx/v1beta1/txs": {
+      "post": {
+        "summary": "BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility\nfor clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting\nBlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate\nthem with others, eventually submitting them to the main chain",
+        "operationId": "Celestia_BroadcastTx",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1BroadcastTxRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Celestia"
+        ]
+      }
+    }
+  }
+}
