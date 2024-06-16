@@ -16,8 +16,6 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-var _ maelstrom.CelestiaServer = (*Server)(nil)
-
 // BroadcastTx broadcast transaction.
 func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequest) (*maelstrom.BroadcastTxResponse, error) {
 	if !s.isConnected.Load() {

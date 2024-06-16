@@ -47,8 +47,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	releaser := node.NewReleaser(client, s.config.TimeoutCommit-time.Second, s.broadcastTx)
 
 	grpcServer := grpc.NewServer()
-	maelstrom.RegisterBlobServer(grpcServer, s)
-	maelstrom.RegisterCelestiaServer(grpcServer, s)
+	maelstrom.RegisterMaelstromServer(grpcServer, s)
 	grpcGatewayMux := runtime.NewServeMux(runtime.WithForwardResponseOption(func(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
 		// Enable CORs
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -57,10 +56,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		return nil
 	}))
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	if err := maelstrom.RegisterBlobHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
-		return fmt.Errorf("error registering grpc endpoint: %w", err)
-	}
-	if err := maelstrom.RegisterCelestiaHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
+	if err := maelstrom.RegisterMaelstromHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress, opts); err != nil {
 		return fmt.Errorf("error registering grpc endpoint: %w", err)
 	}
 

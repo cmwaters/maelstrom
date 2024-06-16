@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-var _ maelstrom.BlobServer = (*Server)(nil)
+var _ maelstrom.MaelstromServer = (*Server)(nil)
 
 type Server struct {
 	isConnected      atomic.Bool
@@ -37,8 +37,7 @@ type Server struct {
 	address          sdk.AccAddress
 	accountRetriever *account.Querier
 	feeMonitor       *node.FeeMonitor
-	maelstrom.UnimplementedBlobServer
-	maelstrom.UnimplementedCelestiaServer
+	maelstrom.UnimplementedMaelstromServer
 }
 
 func New(

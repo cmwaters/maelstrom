@@ -18,10 +18,6 @@ plugins:
     opt:
       - mode=grpcwebtext
       - import_style=typescript
-  - plugin: buf.build/protocolbuffers/js
-    out: gen/js
-    opt:
-      - import_style=es6
   - plugin: buf.build/grpc-ecosystem/openapiv2:v2.16.2
     out: gen/openapiv2
     

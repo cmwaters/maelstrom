@@ -54,7 +54,7 @@ func (cfg *Config) NewClient() (*client.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial Maelstrom server address: %w", err)
 	}
-	return client.New(keys, signer, maelstrom.NewBlobClient(maelstromConn), maelstrom.NewCelestiaClient(maelstromConn))
+	return client.New(keys, signer, maelstrom.NewMaelstromClient(maelstromConn))
 }
 
 func (cfg *Config) Address() (sdk.AccAddress, error) {

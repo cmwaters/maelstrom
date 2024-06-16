@@ -3,10 +3,11 @@ syntax = "proto3";
 package maelstrom.v1;
 
 import "google/api/annotations.proto";
+import "cosmos/base/abci/v1beta1/abci.proto";
 
 option go_package = "github.com/cmwaters/maelstrom";
 
-service Blob {
+service Maelstrom {
     // Info
     rpc Info(InfoRequest) returns (InfoResponse) {
         option (google.api.http) = { get: "/v1/info" };
@@ -34,6 +35,17 @@ service Blob {
     // Pending Withdrawal
     rpc PendingWithdrawal(PendingWithdrawalRequest) returns (PendingWithdrawalResponse) {
         option (google.api.http) = { get: "/v1/pending_withdrawal/{address}" };
+    }
+
+    // BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
+    // for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
+    // BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
+    // them with others, eventually submitting them to the main chain
+    rpc BroadcastTx(BroadcastTxRequest) returns (BroadcastTxResponse) {
+        option (google.api.http) = {
+            post: "/cosmos/tx/v1beta1/txs"
+            body: "*"
+        };
     }
 }
 
@@ -120,4 +132,20 @@ message PendingWithdrawalRequest {
 
 message PendingWithdrawalResponse {
     uint64 amount = 1;
+}
+
+// BroadcastTxRequest matches the fields and types of the BroadcastTxRequest
+// in the Cosmos SDK 
+message BroadcastTxRequest {
+	// tx_bytes is the raw transaction.
+	bytes tx_bytes = 1;
+    // broadcast mode (we ignore it for now)
+	reserved 2;  
+}
+
+message BroadcastTxResponse {
+    cosmos.base.abci.v1beta1.TxResponse tx_response = 1;
+    // the ID is additional information and relates to the ID
+    // used to track the status of the blob in maelstrom
+    uint64 id = 2;
 }

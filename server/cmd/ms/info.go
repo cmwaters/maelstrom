@@ -54,7 +54,7 @@ var infoCmd = &cobra.Command{
 			return nil
 		}
 		defer conn.Close()
-		c := maelstrom.NewBlobClient(conn)
+		c := maelstrom.NewMaelstromClient(conn)
 
 		r, err := c.Info(cmd.Context(), &maelstrom.InfoRequest{})
 		if err != nil {

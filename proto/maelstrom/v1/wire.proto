@@ -1,4 +1,6 @@
 syntax = "proto3";
+// wire.proto contains a set of types that are persisted in DBs and are not
+// used by the gRPC server
 
 package maelstrom.v1;
 

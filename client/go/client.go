@@ -17,18 +17,16 @@ import (
 )
 
 type Client struct {
-	keys           keyring.Keyring
-	signer         *user.Signer
-	client         maelstrom.BlobClient
-	celestiaClient maelstrom.CelestiaClient
+	keys   keyring.Keyring
+	signer *user.Signer
+	client maelstrom.MaelstromClient
 }
 
-func New(keys keyring.Keyring, signer *user.Signer, client maelstrom.BlobClient, celestiaClient maelstrom.CelestiaClient) (*Client, error) {
+func New(keys keyring.Keyring, signer *user.Signer, client maelstrom.MaelstromClient) (*Client, error) {
 	return &Client{
-		keys:           keys,
-		signer:         signer,
-		client:         client,
-		celestiaClient: celestiaClient,
+		keys:   keys,
+		signer: signer,
+		client: client,
 	}, nil
 }
 
@@ -60,7 +58,7 @@ func (c *Client) Deposit(ctx context.Context, coins uint64) error {
 	}
 
 	// TODO: we might want to handle the broadcast response
-	_, err = c.celestiaClient.BroadcastTx(ctx, &maelstrom.BroadcastTxRequest{TxBytes: tx})
+	_, err = c.client.BroadcastTx(ctx, &maelstrom.BroadcastTxRequest{TxBytes: tx})
 	if err != nil {
 		return err
 	}

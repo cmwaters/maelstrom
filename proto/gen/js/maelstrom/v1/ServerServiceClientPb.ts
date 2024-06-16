@@ -20,7 +20,7 @@ import * as grpcWeb from 'grpc-web';
 import * as maelstrom_v1_server_pb from '../../maelstrom/v1/server_pb'; // proto import: "maelstrom/v1/server.proto"
 
 
-export class BlobClient {
+export class MaelstromClient {
   client_: grpcWeb.AbstractClientBase;
   hostname_: string;
   credentials_: null | { [index: string]: string; };
@@ -40,7 +40,7 @@ export class BlobClient {
   }
 
   methodDescriptorInfo = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Info',
+    '/maelstrom.v1.Maelstrom/Info',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.InfoRequest,
     maelstrom_v1_server_pb.InfoResponse,
@@ -68,7 +68,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Info',
+          '/maelstrom.v1.Maelstrom/Info',
         request,
         metadata || {},
         this.methodDescriptorInfo,
@@ -76,14 +76,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Info',
+      '/maelstrom.v1.Maelstrom/Info',
     request,
     metadata || {},
     this.methodDescriptorInfo);
   }
 
   methodDescriptorSubmit = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Submit',
+    '/maelstrom.v1.Maelstrom/Submit',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.SubmitRequest,
     maelstrom_v1_server_pb.SubmitResponse,
@@ -111,7 +111,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Submit',
+          '/maelstrom.v1.Maelstrom/Submit',
         request,
         metadata || {},
         this.methodDescriptorSubmit,
@@ -119,14 +119,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Submit',
+      '/maelstrom.v1.Maelstrom/Submit',
     request,
     metadata || {},
     this.methodDescriptorSubmit);
   }
 
   methodDescriptorStatus = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Status',
+    '/maelstrom.v1.Maelstrom/Status',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.StatusRequest,
     maelstrom_v1_server_pb.StatusResponse,
@@ -154,7 +154,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Status',
+          '/maelstrom.v1.Maelstrom/Status',
         request,
         metadata || {},
         this.methodDescriptorStatus,
@@ -162,14 +162,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Status',
+      '/maelstrom.v1.Maelstrom/Status',
     request,
     metadata || {},
     this.methodDescriptorStatus);
   }
 
   methodDescriptorBalance = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Balance',
+    '/maelstrom.v1.Maelstrom/Balance',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.BalanceRequest,
     maelstrom_v1_server_pb.BalanceResponse,
@@ -197,7 +197,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Balance',
+          '/maelstrom.v1.Maelstrom/Balance',
         request,
         metadata || {},
         this.methodDescriptorBalance,
@@ -205,14 +205,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Balance',
+      '/maelstrom.v1.Maelstrom/Balance',
     request,
     metadata || {},
     this.methodDescriptorBalance);
   }
 
   methodDescriptorCancel = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Cancel',
+    '/maelstrom.v1.Maelstrom/Cancel',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.CancelRequest,
     maelstrom_v1_server_pb.CancelResponse,
@@ -240,7 +240,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Cancel',
+          '/maelstrom.v1.Maelstrom/Cancel',
         request,
         metadata || {},
         this.methodDescriptorCancel,
@@ -248,14 +248,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Cancel',
+      '/maelstrom.v1.Maelstrom/Cancel',
     request,
     metadata || {},
     this.methodDescriptorCancel);
   }
 
   methodDescriptorWithdraw = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/Withdraw',
+    '/maelstrom.v1.Maelstrom/Withdraw',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.WithdrawRequest,
     maelstrom_v1_server_pb.WithdrawResponse,
@@ -283,7 +283,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/Withdraw',
+          '/maelstrom.v1.Maelstrom/Withdraw',
         request,
         metadata || {},
         this.methodDescriptorWithdraw,
@@ -291,14 +291,14 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/Withdraw',
+      '/maelstrom.v1.Maelstrom/Withdraw',
     request,
     metadata || {},
     this.methodDescriptorWithdraw);
   }
 
   methodDescriptorPendingWithdrawal = new grpcWeb.MethodDescriptor(
-    '/maelstrom.v1.Blob/PendingWithdrawal',
+    '/maelstrom.v1.Maelstrom/PendingWithdrawal',
     grpcWeb.MethodType.UNARY,
     maelstrom_v1_server_pb.PendingWithdrawalRequest,
     maelstrom_v1_server_pb.PendingWithdrawalResponse,
@@ -326,7 +326,7 @@ export class BlobClient {
     if (callback !== undefined) {
       return this.client_.rpcCall(
         this.hostname_ +
-          '/maelstrom.v1.Blob/PendingWithdrawal',
+          '/maelstrom.v1.Maelstrom/PendingWithdrawal',
         request,
         metadata || {},
         this.methodDescriptorPendingWithdrawal,
@@ -334,10 +334,53 @@ export class BlobClient {
     }
     return this.client_.unaryCall(
     this.hostname_ +
-      '/maelstrom.v1.Blob/PendingWithdrawal',
+      '/maelstrom.v1.Maelstrom/PendingWithdrawal',
     request,
     metadata || {},
     this.methodDescriptorPendingWithdrawal);
+  }
+
+  methodDescriptorBroadcastTx = new grpcWeb.MethodDescriptor(
+    '/maelstrom.v1.Maelstrom/BroadcastTx',
+    grpcWeb.MethodType.UNARY,
+    maelstrom_v1_server_pb.BroadcastTxRequest,
+    maelstrom_v1_server_pb.BroadcastTxResponse,
+    (request: maelstrom_v1_server_pb.BroadcastTxRequest) => {
+      return request.serializeBinary();
+    },
+    maelstrom_v1_server_pb.BroadcastTxResponse.deserializeBinary
+  );
+
+  broadcastTx(
+    request: maelstrom_v1_server_pb.BroadcastTxRequest,
+    metadata?: grpcWeb.Metadata | null): Promise<maelstrom_v1_server_pb.BroadcastTxResponse>;
+
+  broadcastTx(
+    request: maelstrom_v1_server_pb.BroadcastTxRequest,
+    metadata: grpcWeb.Metadata | null,
+    callback: (err: grpcWeb.RpcError,
+               response: maelstrom_v1_server_pb.BroadcastTxResponse) => void): grpcWeb.ClientReadableStream<maelstrom_v1_server_pb.BroadcastTxResponse>;
+
+  broadcastTx(
+    request: maelstrom_v1_server_pb.BroadcastTxRequest,
+    metadata?: grpcWeb.Metadata | null,
+    callback?: (err: grpcWeb.RpcError,
+               response: maelstrom_v1_server_pb.BroadcastTxResponse) => void) {
+    if (callback !== undefined) {
+      return this.client_.rpcCall(
+        this.hostname_ +
+          '/maelstrom.v1.Maelstrom/BroadcastTx',
+        request,
+        metadata || {},
+        this.methodDescriptorBroadcastTx,
+        callback);
+    }
+    return this.client_.unaryCall(
+    this.hostname_ +
+      '/maelstrom.v1.Maelstrom/BroadcastTx',
+    request,
+    metadata || {},
+    this.methodDescriptorBroadcastTx);
   }
 
 }

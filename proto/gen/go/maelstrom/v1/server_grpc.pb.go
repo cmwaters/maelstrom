@@ -19,19 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	Blob_Info_FullMethodName              = "/maelstrom.v1.Blob/Info"
-	Blob_Submit_FullMethodName            = "/maelstrom.v1.Blob/Submit"
-	Blob_Status_FullMethodName            = "/maelstrom.v1.Blob/Status"
-	Blob_Balance_FullMethodName           = "/maelstrom.v1.Blob/Balance"
-	Blob_Cancel_FullMethodName            = "/maelstrom.v1.Blob/Cancel"
-	Blob_Withdraw_FullMethodName          = "/maelstrom.v1.Blob/Withdraw"
-	Blob_PendingWithdrawal_FullMethodName = "/maelstrom.v1.Blob/PendingWithdrawal"
+	Maelstrom_Info_FullMethodName              = "/maelstrom.v1.Maelstrom/Info"
+	Maelstrom_Submit_FullMethodName            = "/maelstrom.v1.Maelstrom/Submit"
+	Maelstrom_Status_FullMethodName            = "/maelstrom.v1.Maelstrom/Status"
+	Maelstrom_Balance_FullMethodName           = "/maelstrom.v1.Maelstrom/Balance"
+	Maelstrom_Cancel_FullMethodName            = "/maelstrom.v1.Maelstrom/Cancel"
+	Maelstrom_Withdraw_FullMethodName          = "/maelstrom.v1.Maelstrom/Withdraw"
+	Maelstrom_PendingWithdrawal_FullMethodName = "/maelstrom.v1.Maelstrom/PendingWithdrawal"
+	Maelstrom_BroadcastTx_FullMethodName       = "/maelstrom.v1.Maelstrom/BroadcastTx"
 )
 
-// BlobClient is the client API for Blob service.
+// MaelstromClient is the client API for Maelstrom service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type BlobClient interface {
+type MaelstromClient interface {
 	// Info
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 	// Submit
@@ -46,90 +47,105 @@ type BlobClient interface {
 	Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error)
 	// Pending Withdrawal
 	PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error)
+	// BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
+	// for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
+	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
+	// them with others, eventually submitting them to the main chain
+	BroadcastTx(ctx context.Context, in *BroadcastTxRequest, opts ...grpc.CallOption) (*BroadcastTxResponse, error)
 }
 
-type blobClient struct {
+type maelstromClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewBlobClient(cc grpc.ClientConnInterface) BlobClient {
-	return &blobClient{cc}
+func NewMaelstromClient(cc grpc.ClientConnInterface) MaelstromClient {
+	return &maelstromClient{cc}
 }
 
-func (c *blobClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
+func (c *maelstromClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InfoResponse)
-	err := c.cc.Invoke(ctx, Blob_Info_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Info_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) Submit(ctx context.Context, in *SubmitRequest, opts ...grpc.CallOption) (*SubmitResponse, error) {
+func (c *maelstromClient) Submit(ctx context.Context, in *SubmitRequest, opts ...grpc.CallOption) (*SubmitResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SubmitResponse)
-	err := c.cc.Invoke(ctx, Blob_Submit_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Submit_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+func (c *maelstromClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StatusResponse)
-	err := c.cc.Invoke(ctx, Blob_Status_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Status_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error) {
+func (c *maelstromClient) Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BalanceResponse)
-	err := c.cc.Invoke(ctx, Blob_Balance_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Balance_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error) {
+func (c *maelstromClient) Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CancelResponse)
-	err := c.cc.Invoke(ctx, Blob_Cancel_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Cancel_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error) {
+func (c *maelstromClient) Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WithdrawResponse)
-	err := c.cc.Invoke(ctx, Blob_Withdraw_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_Withdraw_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *blobClient) PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error) {
+func (c *maelstromClient) PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PendingWithdrawalResponse)
-	err := c.cc.Invoke(ctx, Blob_PendingWithdrawal_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Maelstrom_PendingWithdrawal_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// BlobServer is the server API for Blob service.
-// All implementations must embed UnimplementedBlobServer
+func (c *maelstromClient) BroadcastTx(ctx context.Context, in *BroadcastTxRequest, opts ...grpc.CallOption) (*BroadcastTxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BroadcastTxResponse)
+	err := c.cc.Invoke(ctx, Maelstrom_BroadcastTx_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MaelstromServer is the server API for Maelstrom service.
+// All implementations must embed UnimplementedMaelstromServer
 // for forward compatibility
-type BlobServer interface {
+type MaelstromServer interface {
 	// Info
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
 	// Submit
@@ -144,207 +160,237 @@ type BlobServer interface {
 	Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error)
 	// Pending Withdrawal
 	PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error)
-	mustEmbedUnimplementedBlobServer()
+	// BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility
+	// for clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting
+	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
+	// them with others, eventually submitting them to the main chain
+	BroadcastTx(context.Context, *BroadcastTxRequest) (*BroadcastTxResponse, error)
+	mustEmbedUnimplementedMaelstromServer()
 }
 
-// UnimplementedBlobServer must be embedded to have forward compatible implementations.
-type UnimplementedBlobServer struct {
+// UnimplementedMaelstromServer must be embedded to have forward compatible implementations.
+type UnimplementedMaelstromServer struct {
 }
 
-func (UnimplementedBlobServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
+func (UnimplementedMaelstromServer) Info(context.Context, *InfoRequest) (*InfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
 }
-func (UnimplementedBlobServer) Submit(context.Context, *SubmitRequest) (*SubmitResponse, error) {
+func (UnimplementedMaelstromServer) Submit(context.Context, *SubmitRequest) (*SubmitResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Submit not implemented")
 }
-func (UnimplementedBlobServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+func (UnimplementedMaelstromServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
 }
-func (UnimplementedBlobServer) Balance(context.Context, *BalanceRequest) (*BalanceResponse, error) {
+func (UnimplementedMaelstromServer) Balance(context.Context, *BalanceRequest) (*BalanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Balance not implemented")
 }
-func (UnimplementedBlobServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
+func (UnimplementedMaelstromServer) Cancel(context.Context, *CancelRequest) (*CancelResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Cancel not implemented")
 }
-func (UnimplementedBlobServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
+func (UnimplementedMaelstromServer) Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Withdraw not implemented")
 }
-func (UnimplementedBlobServer) PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error) {
+func (UnimplementedMaelstromServer) PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PendingWithdrawal not implemented")
 }
-func (UnimplementedBlobServer) mustEmbedUnimplementedBlobServer() {}
+func (UnimplementedMaelstromServer) BroadcastTx(context.Context, *BroadcastTxRequest) (*BroadcastTxResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTx not implemented")
+}
+func (UnimplementedMaelstromServer) mustEmbedUnimplementedMaelstromServer() {}
 
-// UnsafeBlobServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to BlobServer will
+// UnsafeMaelstromServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MaelstromServer will
 // result in compilation errors.
-type UnsafeBlobServer interface {
-	mustEmbedUnimplementedBlobServer()
+type UnsafeMaelstromServer interface {
+	mustEmbedUnimplementedMaelstromServer()
 }
 
-func RegisterBlobServer(s grpc.ServiceRegistrar, srv BlobServer) {
-	s.RegisterService(&Blob_ServiceDesc, srv)
+func RegisterMaelstromServer(s grpc.ServiceRegistrar, srv MaelstromServer) {
+	s.RegisterService(&Maelstrom_ServiceDesc, srv)
 }
 
-func _Blob_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InfoRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Info(ctx, in)
+		return srv.(MaelstromServer).Info(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Info_FullMethodName,
+		FullMethod: Maelstrom_Info_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Info(ctx, req.(*InfoRequest))
+		return srv.(MaelstromServer).Info(ctx, req.(*InfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_Submit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Submit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SubmitRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Submit(ctx, in)
+		return srv.(MaelstromServer).Submit(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Submit_FullMethodName,
+		FullMethod: Maelstrom_Submit_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Submit(ctx, req.(*SubmitRequest))
+		return srv.(MaelstromServer).Submit(ctx, req.(*SubmitRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Status(ctx, in)
+		return srv.(MaelstromServer).Status(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Status_FullMethodName,
+		FullMethod: Maelstrom_Status_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Status(ctx, req.(*StatusRequest))
+		return srv.(MaelstromServer).Status(ctx, req.(*StatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BalanceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Balance(ctx, in)
+		return srv.(MaelstromServer).Balance(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Balance_FullMethodName,
+		FullMethod: Maelstrom_Balance_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Balance(ctx, req.(*BalanceRequest))
+		return srv.(MaelstromServer).Balance(ctx, req.(*BalanceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Cancel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CancelRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Cancel(ctx, in)
+		return srv.(MaelstromServer).Cancel(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Cancel_FullMethodName,
+		FullMethod: Maelstrom_Cancel_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Cancel(ctx, req.(*CancelRequest))
+		return srv.(MaelstromServer).Cancel(ctx, req.(*CancelRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_Withdraw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_Withdraw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WithdrawRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).Withdraw(ctx, in)
+		return srv.(MaelstromServer).Withdraw(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_Withdraw_FullMethodName,
+		FullMethod: Maelstrom_Withdraw_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).Withdraw(ctx, req.(*WithdrawRequest))
+		return srv.(MaelstromServer).Withdraw(ctx, req.(*WithdrawRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Blob_PendingWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Maelstrom_PendingWithdrawal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PendingWithdrawalRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BlobServer).PendingWithdrawal(ctx, in)
+		return srv.(MaelstromServer).PendingWithdrawal(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Blob_PendingWithdrawal_FullMethodName,
+		FullMethod: Maelstrom_PendingWithdrawal_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BlobServer).PendingWithdrawal(ctx, req.(*PendingWithdrawalRequest))
+		return srv.(MaelstromServer).PendingWithdrawal(ctx, req.(*PendingWithdrawalRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Blob_ServiceDesc is the grpc.ServiceDesc for Blob service.
+func _Maelstrom_BroadcastTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastTxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MaelstromServer).BroadcastTx(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Maelstrom_BroadcastTx_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MaelstromServer).BroadcastTx(ctx, req.(*BroadcastTxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Maelstrom_ServiceDesc is the grpc.ServiceDesc for Maelstrom service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Blob_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "maelstrom.v1.Blob",
-	HandlerType: (*BlobServer)(nil),
+var Maelstrom_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "maelstrom.v1.Maelstrom",
+	HandlerType: (*MaelstromServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Info",
-			Handler:    _Blob_Info_Handler,
+			Handler:    _Maelstrom_Info_Handler,
 		},
 		{
 			MethodName: "Submit",
-			Handler:    _Blob_Submit_Handler,
+			Handler:    _Maelstrom_Submit_Handler,
 		},
 		{
 			MethodName: "Status",
-			Handler:    _Blob_Status_Handler,
+			Handler:    _Maelstrom_Status_Handler,
 		},
 		{
 			MethodName: "Balance",
-			Handler:    _Blob_Balance_Handler,
+			Handler:    _Maelstrom_Balance_Handler,
 		},
 		{
 			MethodName: "Cancel",
-			Handler:    _Blob_Cancel_Handler,
+			Handler:    _Maelstrom_Cancel_Handler,
 		},
 		{
 			MethodName: "Withdraw",
-			Handler:    _Blob_Withdraw_Handler,
+			Handler:    _Maelstrom_Withdraw_Handler,
 		},
 		{
 			MethodName: "PendingWithdrawal",
-			Handler:    _Blob_PendingWithdrawal_Handler,
+			Handler:    _Maelstrom_PendingWithdrawal_Handler,
+		},
+		{
+			MethodName: "BroadcastTx",
+			Handler:    _Maelstrom_BroadcastTx_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

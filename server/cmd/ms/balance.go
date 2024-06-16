@@ -24,7 +24,7 @@ var balanceCmd = &cobra.Command{
 			return fmt.Errorf("did not connect: %v", err)
 		}
 		defer conn.Close()
-		c := maelstrom.NewBlobClient(conn)
+		c := maelstrom.NewMaelstromClient(conn)
 
 		r, err := c.Balance(cmd.Context(), &maelstrom.BalanceRequest{Address: args[0]})
 		if err != nil {
