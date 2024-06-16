@@ -32,12 +32,19 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BlobClient interface {
+	// Info
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
+	// Submit
 	Submit(ctx context.Context, in *SubmitRequest, opts ...grpc.CallOption) (*SubmitResponse, error)
+	// Status
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
+	// Balance
 	Balance(ctx context.Context, in *BalanceRequest, opts ...grpc.CallOption) (*BalanceResponse, error)
+	// Cancel
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
+	// Withdraw
 	Withdraw(ctx context.Context, in *WithdrawRequest, opts ...grpc.CallOption) (*WithdrawResponse, error)
+	// Pending Withdrawal
 	PendingWithdrawal(ctx context.Context, in *PendingWithdrawalRequest, opts ...grpc.CallOption) (*PendingWithdrawalResponse, error)
 }
 
@@ -123,12 +130,19 @@ func (c *blobClient) PendingWithdrawal(ctx context.Context, in *PendingWithdrawa
 // All implementations must embed UnimplementedBlobServer
 // for forward compatibility
 type BlobServer interface {
+	// Info
 	Info(context.Context, *InfoRequest) (*InfoResponse, error)
+	// Submit
 	Submit(context.Context, *SubmitRequest) (*SubmitResponse, error)
+	// Status
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
+	// Balance
 	Balance(context.Context, *BalanceRequest) (*BalanceResponse, error)
+	// Cancel
 	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
+	// Withdraw
 	Withdraw(context.Context, *WithdrawRequest) (*WithdrawResponse, error)
+	// Pending Withdrawal
 	PendingWithdrawal(context.Context, *PendingWithdrawalRequest) (*PendingWithdrawalResponse, error)
 	mustEmbedUnimplementedBlobServer()
 }

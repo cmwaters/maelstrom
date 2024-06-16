@@ -1,0 +1,14 @@
+{
+  "inputs": [
+    {
+      "inputFile": "./proto/gen/openapiv2/maelstrom/v1/server.swagger.json"
+    },
+    {
+      "inputFile": "./proto/gen/openapiv2/maelstrom/v1/celestia.swagger.json"
+    },
+    {
+      "inputFile": "./proto/gen/openapiv2/maelstrom/v1/wire.swagger.json"
+    }
+  ],
+  "output": "./web/server/static/api/openapi.json"
+}

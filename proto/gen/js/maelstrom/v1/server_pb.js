@@ -477,7 +477,8 @@ proto.maelstrom.v1.InfoResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
     address: jspb.Message.getFieldWithDefault(msg, 1, ""),
     height: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    minGasPrice: jspb.Message.getFloatingPointFieldWithDefault(msg, 3, 0.0)
+    chainId: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    minGasPrice: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0)
   };
 
   if (includeInstance) {
@@ -523,6 +524,10 @@ proto.maelstrom.v1.InfoResponse.deserializeBinaryFromReader = function(msg, read
       msg.setHeight(value);
       break;
     case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setChainId(value);
+      break;
+    case 4:
       var value = /** @type {number} */ (reader.readDouble());
       msg.setMinGasPrice(value);
       break;
@@ -569,10 +574,17 @@ proto.maelstrom.v1.InfoResponse.serializeBinaryToWriter = function(message, writ
       f
     );
   }
+  f = message.getChainId();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
   f = message.getMinGasPrice();
   if (f !== 0.0) {
     writer.writeDouble(
-      3,
+      4,
       f
     );
   }
@@ -616,11 +628,29 @@ proto.maelstrom.v1.InfoResponse.prototype.setHeight = function(value) {
 
 
 /**
- * optional double min_gas_price = 3;
+ * optional string chain_id = 3;
+ * @return {string}
+ */
+proto.maelstrom.v1.InfoResponse.prototype.getChainId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.maelstrom.v1.InfoResponse} returns this
+ */
+proto.maelstrom.v1.InfoResponse.prototype.setChainId = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional double min_gas_price = 4;
  * @return {number}
  */
 proto.maelstrom.v1.InfoResponse.prototype.getMinGasPrice = function() {
-  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 3, 0.0));
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 4, 0.0));
 };
 
 
@@ -629,7 +659,7 @@ proto.maelstrom.v1.InfoResponse.prototype.getMinGasPrice = function() {
  * @return {!proto.maelstrom.v1.InfoResponse} returns this
  */
 proto.maelstrom.v1.InfoResponse.prototype.setMinGasPrice = function(value) {
-  return jspb.Message.setProto3FloatField(this, 3, value);
+  return jspb.Message.setProto3FloatField(this, 4, value);
 };
 
 

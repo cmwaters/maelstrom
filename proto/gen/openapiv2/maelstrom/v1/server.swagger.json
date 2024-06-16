@@ -18,6 +18,7 @@
   "paths": {
     "/v1/balance/{address}": {
       "get": {
+        "summary": "Balance",
         "operationId": "Blob_Balance",
         "responses": {
           "200": {
@@ -48,6 +49,7 @@
     },
     "/v1/cancel": {
       "post": {
+        "summary": "Cancel",
         "operationId": "Blob_Cancel",
         "responses": {
           "200": {
@@ -80,6 +82,7 @@
     },
     "/v1/info": {
       "get": {
+        "summary": "Info",
         "operationId": "Blob_Info",
         "responses": {
           "200": {
@@ -102,6 +105,7 @@
     },
     "/v1/pending_withdrawal/{address}": {
       "get": {
+        "summary": "Pending Withdrawal",
         "operationId": "Blob_PendingWithdrawal",
         "responses": {
           "200": {
@@ -132,6 +136,7 @@
     },
     "/v1/status/{id}": {
       "get": {
+        "summary": "Status",
         "operationId": "Blob_Status",
         "responses": {
           "200": {
@@ -163,6 +168,7 @@
     },
     "/v1/submit": {
       "post": {
+        "summary": "Submit",
         "operationId": "Blob_Submit",
         "responses": {
           "200": {
@@ -195,6 +201,7 @@
     },
     "/v1/withdraw": {
       "post": {
+        "summary": "Withdraw",
         "operationId": "Blob_Withdraw",
         "responses": {
           "200": {
@@ -293,6 +300,9 @@
         "height": {
           "type": "string",
           "format": "uint64"
+        },
+        "chainId": {
+          "type": "string"
         },
         "minGasPrice": {
           "type": "number",

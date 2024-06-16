@@ -18,7 +18,6 @@
   "paths": {
     "/cosmos/tx/v1beta1/txs": {
       "post": {
-        "summary": "BroadcastTx mimics the gRPC endpoint for the Cosmos SDK's tx service. This allows easier compatibility\nfor clients. They can simply redirect their endpoint to the Maelstrom service and continue submitting\nBlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate\nthem with others, eventually submitting them to the main chain",
         "operationId": "Celestia_BroadcastTx",
         "responses": {
           "200": {

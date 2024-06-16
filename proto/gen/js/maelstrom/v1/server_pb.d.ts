@@ -24,6 +24,9 @@ export class InfoResponse extends jspb.Message {
   getHeight(): number;
   setHeight(value: number): InfoResponse;
 
+  getChainId(): string;
+  setChainId(value: string): InfoResponse;
+
   getMinGasPrice(): number;
   setMinGasPrice(value: number): InfoResponse;
 
@@ -39,6 +42,7 @@ export namespace InfoResponse {
   export type AsObject = {
     address: string,
     height: number,
+    chainId: string,
     minGasPrice: number,
   }
 }
