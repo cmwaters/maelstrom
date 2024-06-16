@@ -88,8 +88,9 @@ func (s *EndToEndTestSuite) SetupSuite() {
 	cdc := encoding.MakeConfig(app.ModuleEncodingRegisters...)
 	signer, err := user.SetupSigner(testCtx, nctx.Keyring, nctx.GRPCClient, clientAddr, cdc)
 	require.NoError(t, err)
-	c := maelstrom.NewBlobClient(clientConn)
-	s.client, err = client.New(nctx.Keyring, signer, c)
+	blobClient := maelstrom.NewBlobClient(clientConn)
+	celestiaClient := maelstrom.NewCelestiaClient(clientConn)
+	s.client, err = client.New(nctx.Keyring, signer, blobClient, celestiaClient)
 	require.NoError(t, err)
 }
 

@@ -10,6 +10,7 @@ import (
 	blob "github.com/celestiaorg/celestia-app/x/blob/types"
 	"github.com/cmwaters/maelstrom/account"
 	maelstrom "github.com/cmwaters/maelstrom/proto/gen/go/maelstrom/v1"
+	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	tmtypes "github.com/tendermint/tendermint/proto/tendermint/types"
 	"github.com/tendermint/tendermint/types"
@@ -25,7 +26,17 @@ func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequ
 
 	blobTx, isBlobTx := types.UnmarshalBlobTx(req.TxBytes)
 	if !isBlobTx {
-		return nil, errors.New("must be a blob tx")
+		// for non blob tx's the server proxies the request to the connected consensus node
+		resp, err := sdktx.NewServiceClient(s.conn).BroadcastTx(ctx, &sdktx.BroadcastTxRequest{
+			TxBytes: req.TxBytes,
+			Mode:    sdktx.BroadcastMode_BROADCAST_MODE_SYNC,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &maelstrom.BroadcastTxResponse{
+			TxResponse: resp.TxResponse,
+		}, nil
 	}
 
 	rawTx, err := cdc.TxConfig.TxDecoder()(blobTx.Tx)

@@ -144,13 +144,21 @@ class Client {
                 accountNumber: long_1.default.fromString("1")
             };
             console.log("here");
-            const signed = yield this.keplr.signDirect(this.chainID, this.user_address, signDoc);
+            let signed;
+            try {
+                signed = yield this.keplr.signDirect(this.chainID, this.user_address, signDoc);
+            }
+            catch (error) {
+                console.log("Error signing", error);
+                throw new Error('Keplr failed to sign deposit: ' + String(error));
+            }
             console.log("signed", signed);
             const tx = tx_2.TxRaw.encode({
                 bodyBytes: signed.signed.bodyBytes,
                 authInfoBytes: signed.signed.authInfoBytes,
                 signatures: [buffer_1.Buffer.from(signed.signature.signature, "base64")],
             }).finish();
+            console.log("tx", tx);
             try {
                 const response = yield fetch(`${this.baseUrl}/cosmos/tx/v1beta1/txs`, {
                     method: 'POST',

@@ -241,6 +241,7 @@ proto.maelstrom.v1.BroadcastTxResponse.prototype.toObject = function(opt_include
  */
 proto.maelstrom.v1.BroadcastTxResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
+    txResponse: (f = msg.getTxResponse()) && proto.cosmos.base.abci.v1beta1.TxResponse.toObject(includeInstance, f),
     id: jspb.Message.getFieldWithDefault(msg, 2, 0)
   };
 
@@ -278,6 +279,11 @@ proto.maelstrom.v1.BroadcastTxResponse.deserializeBinaryFromReader = function(ms
     }
     var field = reader.getFieldNumber();
     switch (field) {
+    case 1:
+      var value = new proto.cosmos.base.abci.v1beta1.TxResponse;
+      reader.readMessage(value,proto.cosmos.base.abci.v1beta1.TxResponse.deserializeBinaryFromReader);
+      msg.setTxResponse(value);
+      break;
     case 2:
       var value = /** @type {number} */ (reader.readUint64());
       msg.setId(value);
@@ -311,6 +317,14 @@ proto.maelstrom.v1.BroadcastTxResponse.prototype.serializeBinary = function() {
  */
 proto.maelstrom.v1.BroadcastTxResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getTxResponse();
+  if (f != null) {
+    writer.writeMessage(
+      1,
+      f,
+      proto.cosmos.base.abci.v1beta1.TxResponse.serializeBinaryToWriter
+    );
+  }
   f = message.getId();
   if (f !== 0) {
     writer.writeUint64(
@@ -318,6 +332,43 @@ proto.maelstrom.v1.BroadcastTxResponse.serializeBinaryToWriter = function(messag
       f
     );
   }
+};
+
+
+/**
+ * optional cosmos.base.abci.v1beta1.TxResponse tx_response = 1;
+ * @return {?proto.cosmos.base.abci.v1beta1.TxResponse}
+ */
+proto.maelstrom.v1.BroadcastTxResponse.prototype.getTxResponse = function() {
+  return /** @type{?proto.cosmos.base.abci.v1beta1.TxResponse} */ (
+    jspb.Message.getWrapperField(this, proto.cosmos.base.abci.v1beta1.TxResponse, 1));
+};
+
+
+/**
+ * @param {?proto.cosmos.base.abci.v1beta1.TxResponse|undefined} value
+ * @return {!proto.maelstrom.v1.BroadcastTxResponse} returns this
+*/
+proto.maelstrom.v1.BroadcastTxResponse.prototype.setTxResponse = function(value) {
+  return jspb.Message.setWrapperField(this, 1, value);
+};
+
+
+/**
+ * Clears the message field making it undefined.
+ * @return {!proto.maelstrom.v1.BroadcastTxResponse} returns this
+ */
+proto.maelstrom.v1.BroadcastTxResponse.prototype.clearTxResponse = function() {
+  return this.setTxResponse(undefined);
+};
+
+
+/**
+ * Returns whether this field is set.
+ * @return {boolean}
+ */
+proto.maelstrom.v1.BroadcastTxResponse.prototype.hasTxResponse = function() {
+  return jspb.Message.getField(this, 1) != null;
 };
 
 

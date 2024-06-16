@@ -24,11 +24,14 @@ window.connectWallet = async () => {
     if (!window.keplr) {
         popup("Keplr wallet is not available.");
     } else {
-        let address = await client.connectToKeplr(window.keplr)
-        .catch(error => popup('Error connecting to keplr wallet: ' + String(error)))
-        console.log("ADDRESS: ", address)
-        renderPage()
-        await loadPage(address)   
+        try {
+            let address = await client.connectToKeplr(window.keplr)
+            renderPage()
+            await loadPage(address)  
+            localStorage.setItem(tokenKey, address)
+        } catch (error) {
+            popup('Error connecting to keplr wallet: ' + String(error))
+        }
     }
 };
 

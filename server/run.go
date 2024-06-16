@@ -33,6 +33,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		return err
 	}
 
+	s.conn = nodeGRPC
 	s.accountRetriever = account.NewQuerier(nodeGRPC)
 	s.feeMonitor, err = node.NewFeeMonitor(ctx, nodeGRPC)
 	if err != nil {

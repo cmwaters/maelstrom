@@ -20,6 +20,7 @@ import (
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/dgraph-io/badger"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
 )
 
 var _ maelstrom.BlobServer = (*Server)(nil)
@@ -31,6 +32,7 @@ type Server struct {
 	pool             *tx.Pool
 	store            *account.Store
 	keys             keyring.Keyring
+	conn             *grpc.ClientConn
 	signer           *user.Signer
 	address          sdk.AccAddress
 	accountRetriever *account.Querier

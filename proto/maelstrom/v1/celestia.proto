@@ -3,6 +3,7 @@ syntax = "proto3";
 package maelstrom.v1;
 
 import "google/api/annotations.proto";
+import "cosmos/base/abci/v1beta1/abci.proto";
 
 option go_package = "github.com/cmwaters/maelstrom";
 
@@ -27,6 +28,6 @@ message BroadcastTxRequest {
 }
 
 message BroadcastTxResponse {
-    reserved 1; // tx response
+    cosmos.base.abci.v1beta1.TxResponse tx_response = 1;
     uint64 id = 2;
 }

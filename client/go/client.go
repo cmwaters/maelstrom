@@ -17,16 +17,18 @@ import (
 )
 
 type Client struct {
-	keys   keyring.Keyring
-	signer *user.Signer
-	client maelstrom.BlobClient
+	keys           keyring.Keyring
+	signer         *user.Signer
+	client         maelstrom.BlobClient
+	celestiaClient maelstrom.CelestiaClient
 }
 
-func New(keys keyring.Keyring, signer *user.Signer, client maelstrom.BlobClient) (*Client, error) {
+func New(keys keyring.Keyring, signer *user.Signer, client maelstrom.BlobClient, celestiaClient maelstrom.CelestiaClient) (*Client, error) {
 	return &Client{
-		keys:   keys,
-		signer: signer,
-		client: client,
+		keys:           keys,
+		signer:         signer,
+		client:         client,
+		celestiaClient: celestiaClient,
 	}, nil
 }
 
@@ -46,14 +48,23 @@ func (c *Client) Deposit(ctx context.Context, coins uint64) error {
 		return err
 	}
 	toAdress := resp.Address
-	_, err = c.signer.SubmitTx(ctx, []sdk.Msg{
+	tx, err := c.signer.CreateTx([]sdk.Msg{
 		&bank.MsgSend{
 			FromAddress: c.signer.Address().String(),
 			ToAddress:   toAdress,
 			Amount:      sdk.NewCoins(sdk.NewInt64Coin(app.BondDenom, int64(coins))),
 		},
 	}, user.SetGasLimitAndFee(200_000, resp.MinGasPrice))
-	return err
+	if err != nil {
+		return err
+	}
+
+	// TODO: we might want to handle the broadcast response
+	_, err = c.celestiaClient.BroadcastTx(ctx, &maelstrom.BroadcastTxRequest{TxBytes: tx})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) Submit(ctx context.Context, namespace []byte, blobs [][]byte, fee uint64) (uint64, error) {
