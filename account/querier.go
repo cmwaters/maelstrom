@@ -8,7 +8,6 @@ import (
 	"github.com/celestiaorg/celestia-app/app"
 	"github.com/celestiaorg/celestia-app/app/encoding"
 	"github.com/celestiaorg/celestia-app/pkg/appconsts"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	auth "github.com/cosmos/cosmos-sdk/x/auth/types"
 	bank "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -27,23 +26,23 @@ func NewQuerier(conn *grpc.ClientConn) *Querier {
 	}
 }
 
-func (q *Querier) GetAccount(ctx context.Context, address string) (cryptotypes.PubKey, uint64, error) {
+func (q *Querier) GetAccount(ctx context.Context, address string) (auth.AccountI, error) {
 	client := auth.NewQueryClient(q.conn)
 	timeOutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	resp, err := client.Account(timeOutCtx, &auth.QueryAccountRequest{Address: address})
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	var acc auth.AccountI
 	err = q.cdc.InterfaceRegistry.UnpackAny(resp.Account, &acc)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
-	return acc.GetPubKey(), acc.GetAccountNumber(), nil
+	return acc, nil
 }
 
 func (q *Querier) GetBalance(ctx context.Context, address string) (uint64, error) {

@@ -35,6 +35,7 @@ func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequ
 			s.log.Error().Err(err).Msg("error broadcasting tx to consensus node")
 			return nil, err
 		}
+		s.log.Info().Msgf("broadcasted tx to consensus node: %v", resp.TxResponse)
 		return &maelstrom.BroadcastTxResponse{
 			TxResponse: resp.TxResponse,
 		}, nil
@@ -97,6 +98,20 @@ func (s *Server) BroadcastTx(ctx context.Context, req *maelstrom.BroadcastTxRequ
 		Id: uint64(id),
 	}, nil
 }
+
+func (s *Server) AccountInfo(ctx context.Context, req *maelstrom.AccountInfoRequest) (*maelstrom.AccountInfoResponse, error) {
+	acc, err := s.accountRetriever.GetAccount(ctx, req.Address)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error retrieving account information")
+		return nil, fmt.Errorf("retrieve account info: %w", err)
+	}
+
+	return &maelstrom.AccountInfoResponse{
+		AccountNumber: acc.GetAccountNumber(),
+		Sequence:      acc.GetSequence(),
+	}, nil
+}
+
 
 func getPFB(tx authsigning.Tx) (*blob.MsgPayForBlobs, error) {
 	msgs := tx.GetMsgs()

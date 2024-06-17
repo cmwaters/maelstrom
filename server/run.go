@@ -50,13 +50,16 @@ func (s *Server) Serve(ctx context.Context) error {
 	maelstrom.RegisterMaelstromServer(grpcServer, s)
 	grpcGatewayMux := runtime.NewServeMux(runtime.WithForwardResponseOption(func(ctx context.Context, w http.
 		ResponseWriter, resp proto.Message) error {
-		// Enable CORs
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, application/json")
-		w.WriteHeader(http.StatusOK)
+		// Enable CORs. This allows browser clients to make requests to the maelstrom server
+		enableCORS(w)
 		return nil
 	}))
+	// we need to also handle OPTIONS HTTP requests as it's common for browsers to send them as preflight
+	// messages prior to calling a POST request.
+	grpcGatewayMux.Handle("OPTIONS", pattern_Maelstrom_BroadcastTx_0, func(w http.ResponseWriter, r *http.Request, _ map[string]string) {
+		enableCORS(w)
+		w.WriteHeader(http.StatusOK)
+	})
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	if err := maelstrom.RegisterMaelstromHandlerFromEndpoint(ctx, grpcGatewayMux, s.config.GRPCServerAddress,
 		opts); err != nil {
@@ -189,3 +192,13 @@ func (s *Server) WaitUntilReady(ctx context.Context) error {
 		}
 	}
 }
+
+func enableCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+var (
+	pattern_Maelstrom_BroadcastTx_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"cosmos", "tx", "v1beta1", "txs"}, ""))
+)

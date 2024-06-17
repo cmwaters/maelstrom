@@ -87,6 +87,16 @@ class Client {
             return body;
         });
     }
+    accountInfo(address) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield fetch(`${this.baseUrl}/account_info/${this.user_address}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch account info');
+            }
+            const body = yield response.json();
+            return body;
+        });
+    }
     deposit(amount) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.user_address == "") {
@@ -110,6 +120,8 @@ class Client {
                     ],
                 }).finish(),
             };
+            const accountInfo = yield this.accountInfo(this.user_address);
+            console.log("accountInfo", accountInfo);
             const signDoc = {
                 bodyBytes: tx_2.TxBody.encode(tx_2.TxBody.fromPartial({
                     messages: [protoMsgs],
@@ -129,7 +141,7 @@ class Client {
                                 },
                                 multi: undefined,
                             },
-                            sequence: "0",
+                            sequence: accountInfo.sequence,
                         },
                     ],
                     fee: tx_2.Fee.fromPartial({
@@ -141,7 +153,7 @@ class Client {
                     }),
                 }).finish(),
                 chainId: this.chainID,
-                accountNumber: long_1.default.fromString("1")
+                accountNumber: long_1.default.fromString(accountInfo.accountNumber)
             };
             console.log("here");
             let signed;
@@ -159,14 +171,16 @@ class Client {
                 signatures: [buffer_1.Buffer.from(signed.signature.signature, "base64")],
             }).finish();
             try {
+                let body = JSON.stringify({
+                    "tx_bytes": buffer_1.Buffer.from(tx).toString('base64')
+                });
+                console.log("body", body);
                 const response = yield fetch(`${this.baseUrl}/cosmos/tx/v1beta1/txs`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        tx_bytes: tx
-                    })
+                    body: body
                 });
                 console.log(response);
                 if (!response.ok) {

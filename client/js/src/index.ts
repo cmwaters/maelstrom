@@ -76,6 +76,15 @@ export class Client {
     return body;
   }
 
+  async accountInfo(address: string): Promise<AccountResponse> {
+    const response = await fetch(`${this.baseUrl}/account_info/${this.user_address}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch account info');
+    }
+    const body = await response.json() as AccountResponse;
+    return body;
+  }
+
   async deposit(amount: number): Promise<void> {
     if (this.user_address == "") {
         throw new Error('No user address found');
@@ -100,6 +109,9 @@ export class Client {
         }).finish(),
     };
 
+    const accountInfo = await this.accountInfo(this.user_address)
+    console.log("accountInfo", accountInfo)
+
     const signDoc = {
       bodyBytes: TxBody.encode(
         TxBody.fromPartial({
@@ -121,7 +133,7 @@ export class Client {
               },
               multi: undefined,
             },
-            sequence: "0",
+            sequence: accountInfo.sequence,
           },
         ],
         fee: Fee.fromPartial({
@@ -133,7 +145,7 @@ export class Client {
         }),
       }).finish(),
       chainId: this.chainID,
-      accountNumber: Long.fromString("1")
+      accountNumber: Long.fromString(accountInfo.accountNumber)
     }
 
     console.log("here")
@@ -157,14 +169,16 @@ export class Client {
     }).finish()
 
     try {
+        let body = JSON.stringify({
+            "tx_bytes": Buffer.from(tx).toString('base64')
+        })
+        console.log("body", body)
         const response = await fetch(`${this.baseUrl}/cosmos/tx/v1beta1/txs`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                tx_bytes: tx
-            })
+            body: body  
         });
 
         console.log(response)
@@ -229,4 +243,9 @@ function chainInfo(chainID: string): any {
                 }
         ],
     }
+}
+
+export type AccountResponse = {
+  accountNumber: string
+  sequence: string
 }

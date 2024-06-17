@@ -47,6 +47,14 @@ service Maelstrom {
             body: "*"
         };
     }
+
+    // AccountInfo returns the sequence and account number of the account on Celestia.
+    // It does this by proxying the request to the underlying consensus node.
+    rpc AccountInfo(AccountInfoRequest) returns (AccountInfoResponse) {
+        option (google.api.http) = {
+            get: "/account_info/{address}"
+        };
+    }
 }
 
 message InfoRequest {}
@@ -148,4 +156,13 @@ message BroadcastTxResponse {
     // the ID is additional information and relates to the ID
     // used to track the status of the blob in maelstrom
     uint64 id = 2;
+}
+
+message AccountInfoRequest {
+    string address = 1;
+}
+
+message AccountInfoResponse {
+    uint64 account_number = 1;
+    uint64 sequence = 2;
 }

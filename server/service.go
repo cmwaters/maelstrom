@@ -61,6 +61,7 @@ func New(
 var ErrServerNotReady = errors.New("server not ready")
 
 func (s *Server) Info(ctx context.Context, req *maelstrom.InfoRequest) (*maelstrom.InfoResponse, error) {
+	s.log.Info().Msg("info request")
 	chainID := ""
 	if s.signer != nil {
 		chainID = s.signer.ChainID()
@@ -124,6 +125,7 @@ func (s *Server) Status(ctx context.Context, req *maelstrom.StatusRequest) (*mae
 }
 
 func (s *Server) Balance(ctx context.Context, req *maelstrom.BalanceRequest) (*maelstrom.BalanceResponse, error) {
+	s.log.Info().Msg("balance request")
 	if !s.isConnected.Load() {
 		return nil, ErrServerNotReady
 	}
@@ -227,12 +229,12 @@ func (s *Server) getAccount(ctx context.Context, address string) (*account.Accou
 	// If the public key / account number is not present, we need to
 	// retrieve it from the chain and update the account store.
 	if !acc.IsSet() {
-		pk, accNum, err := s.accountRetriever.GetAccount(ctx, address)
+		celAcc, err := s.accountRetriever.GetAccount(ctx, address)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get pubkey for signer %s: %w", address, err)
 		}
-		acc.PubKey = pk
-		acc.AccountNumber = accNum
+		acc.PubKey = celAcc.GetPubKey()
+		acc.AccountNumber = celAcc.GetAccountNumber()
 		if err := s.store.SetAccount(address, acc); err != nil {
 			return nil, fmt.Errorf("failed to set account for signer %s: %w", address, err)
 		}

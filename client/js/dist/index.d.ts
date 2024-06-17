@@ -9,6 +9,7 @@ export declare class Client {
     connectToKeplr(keplr: Keplr): Promise<string>;
     balance(address: string): Promise<BalanceResponse>;
     info(): Promise<InfoResponse>;
+    accountInfo(address: string): Promise<AccountResponse>;
     deposit(amount: number): Promise<void>;
 }
 export interface InfoResponse {
@@ -21,3 +22,7 @@ export interface BalanceResponse {
     celestiaBalance: number;
     maelstromBalance: number;
 }
+export type AccountResponse = {
+    accountNumber: string;
+    sequence: string;
+};

@@ -27,6 +27,7 @@ const (
 	Maelstrom_Withdraw_FullMethodName          = "/maelstrom.v1.Maelstrom/Withdraw"
 	Maelstrom_PendingWithdrawal_FullMethodName = "/maelstrom.v1.Maelstrom/PendingWithdrawal"
 	Maelstrom_BroadcastTx_FullMethodName       = "/maelstrom.v1.Maelstrom/BroadcastTx"
+	Maelstrom_AccountInfo_FullMethodName       = "/maelstrom.v1.Maelstrom/AccountInfo"
 )
 
 // MaelstromClient is the client API for Maelstrom service.
@@ -52,6 +53,9 @@ type MaelstromClient interface {
 	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
 	// them with others, eventually submitting them to the main chain
 	BroadcastTx(ctx context.Context, in *BroadcastTxRequest, opts ...grpc.CallOption) (*BroadcastTxResponse, error)
+	// AccountInfo returns the sequence and account number of the account on Celestia.
+	// It does this by proxying the request to the underlying consensus node.
+	AccountInfo(ctx context.Context, in *AccountInfoRequest, opts ...grpc.CallOption) (*AccountInfoResponse, error)
 }
 
 type maelstromClient struct {
@@ -142,6 +146,16 @@ func (c *maelstromClient) BroadcastTx(ctx context.Context, in *BroadcastTxReques
 	return out, nil
 }
 
+func (c *maelstromClient) AccountInfo(ctx context.Context, in *AccountInfoRequest, opts ...grpc.CallOption) (*AccountInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AccountInfoResponse)
+	err := c.cc.Invoke(ctx, Maelstrom_AccountInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MaelstromServer is the server API for Maelstrom service.
 // All implementations must embed UnimplementedMaelstromServer
 // for forward compatibility
@@ -165,6 +179,9 @@ type MaelstromServer interface {
 	// BlobTxs. Maelstrom will decode them, verify the signer and signature, extract the blobs and aggregate
 	// them with others, eventually submitting them to the main chain
 	BroadcastTx(context.Context, *BroadcastTxRequest) (*BroadcastTxResponse, error)
+	// AccountInfo returns the sequence and account number of the account on Celestia.
+	// It does this by proxying the request to the underlying consensus node.
+	AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error)
 	mustEmbedUnimplementedMaelstromServer()
 }
 
@@ -195,6 +212,9 @@ func (UnimplementedMaelstromServer) PendingWithdrawal(context.Context, *PendingW
 }
 func (UnimplementedMaelstromServer) BroadcastTx(context.Context, *BroadcastTxRequest) (*BroadcastTxResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BroadcastTx not implemented")
+}
+func (UnimplementedMaelstromServer) AccountInfo(context.Context, *AccountInfoRequest) (*AccountInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AccountInfo not implemented")
 }
 func (UnimplementedMaelstromServer) mustEmbedUnimplementedMaelstromServer() {}
 
@@ -353,6 +373,24 @@ func _Maelstrom_BroadcastTx_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Maelstrom_AccountInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MaelstromServer).AccountInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Maelstrom_AccountInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MaelstromServer).AccountInfo(ctx, req.(*AccountInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Maelstrom_ServiceDesc is the grpc.ServiceDesc for Maelstrom service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -391,6 +429,10 @@ var Maelstrom_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BroadcastTx",
 			Handler:    _Maelstrom_BroadcastTx_Handler,
+		},
+		{
+			MethodName: "AccountInfo",
+			Handler:    _Maelstrom_AccountInfo_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
